@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          accion: string
+          created_at: string
+          id: string
+          registro_id: string | null
+          tabla: string
+          user_id: string | null
+          valores_anteriores: Json | null
+          valores_nuevos: Json | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          id?: string
+          registro_id?: string | null
+          tabla: string
+          user_id?: string | null
+          valores_anteriores?: Json | null
+          valores_nuevos?: Json | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          id?: string
+          registro_id?: string | null
+          tabla?: string
+          user_id?: string | null
+          valores_anteriores?: Json | null
+          valores_nuevos?: Json | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           codigo: string
