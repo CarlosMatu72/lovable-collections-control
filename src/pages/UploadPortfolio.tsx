@@ -321,41 +321,9 @@ export default function UploadPortfolio() {
         console.warn("Reconciliation warning:", reconcileErr);
       }
 
-      // 4. Update vencimiento status
-      setProgressMsg("Calculando vencimientos...");
+      // 4. Programar actualización de vencimientos en background (post-carga)
+      setProgressMsg("Finalizando carga...");
       setProgress(85);
-
-      const { data: facturas } = await supabase
-        .from("invoices")
-        .select("id, fecha_emision, status, cliente_codigo")
-        .eq("active", true);
-
-      const { data: clientesInfo } = await supabase
-        .from("clients")
-        .select("codigo, dias_credito, tipo_dias");
-
-      if (facturas && clientesInfo) {
-        const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
-        clientesInfo.forEach(c => (clientMap[c.codigo] = c));
-
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-
-        const updates: { id: string; status: string }[] = [];
-        for (const f of facturas) {
-          if (!f.fecha_emision) continue;
-          const client = clientMap[f.cliente_codigo];
-          if (!client) continue;
-          const fechaVenc = new Date(f.fecha_emision);
-          fechaVenc.setDate(fechaVenc.getDate() + client.dias_credito);
-          const nuevoStatus = fechaVenc < hoy ? "vencida" : "vigente";
-          if (f.status !== nuevoStatus) updates.push({ id: f.id, status: nuevoStatus });
-        }
-
-        for (const u of updates) {
-          await supabase.from("invoices").update({ status: u.status as "vigente" | "vencida" }).eq("id", u.id);
-        }
-      }
 
       // 5. Log upload
       setProgressMsg("Registrando carga...");
