@@ -290,7 +290,7 @@ export default function UploadPortfolio() {
         res.pagadas = refsPagadas.length;
       }
 
-      const BATCH_SIZE = 1000;
+      const BATCH_SIZE = 200;
 
       // Track which are new vs existing
       const refsActualesSet = new Set(
@@ -322,16 +322,28 @@ export default function UploadPortfolio() {
           status: "vigente" as const,
         }));
 
-        const { error } = await supabase
-          .from("invoices")
-          .upsert(invoicesData, { onConflict: "reference", ignoreDuplicates: false });
+        try {
+          const { error } = await supabase
+            .from("invoices")
+            .upsert(invoicesData, { onConflict: "reference", ignoreDuplicates: false });
 
-        if (error) throw error;
+          if (error) {
+            console.error('Error en batch:', error);
+            throw new Error(
+              `Error insertando batch: ${error.message || error.details || JSON.stringify(error)}`
+            );
+          }
 
-        batch.forEach(r => {
-          if (refsActualesSet.has(r.reference)) res.actualizadas++;
-          else res.nuevas++;
-        });
+          batch.forEach(r => {
+            if (refsActualesSet.has(r.reference)) res.actualizadas++;
+            else res.nuevas++;
+          });
+        } catch (batchError: any) {
+          console.error('Error procesando batch:', batchError);
+          throw new Error(
+            `Falló el procesamiento en factura ${i + 1}: ${batchError.message || String(batchError)}`
+          );
+        }
       }
 
       // 3.5 Reconcile manual payments
