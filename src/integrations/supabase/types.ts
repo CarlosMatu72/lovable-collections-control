@@ -392,6 +392,7 @@ export type Database = {
           a_favor: number
           neto: number
           pct_vencido: number
+          total_facturas: number
           vencido: number
           vigente: number
         }[]
