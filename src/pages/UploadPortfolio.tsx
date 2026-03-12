@@ -285,7 +285,7 @@ export default function UploadPortfolio() {
             .from("invoices")
             .update({ active: false, status: "pagada" as const, paid_date: new Date().toISOString().split("T")[0] })
             .in("reference", chunk);
-          if (error) throw error;
+          if (error) throw new Error(error.message || JSON.stringify(error));
         }
         res.pagadas = refsPagadas.length;
       }
