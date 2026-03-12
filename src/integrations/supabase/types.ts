@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts: {
+        Row: {
+          cliente_codigo: string | null
+          fecha_alerta: string
+          id: string
+          mensaje: string
+          referencia: string | null
+          tipo: string
+          user_id: string | null
+          visto: boolean | null
+          visto_at: string | null
+          visto_por: string | null
+        }
+        Insert: {
+          cliente_codigo?: string | null
+          fecha_alerta?: string
+          id?: string
+          mensaje: string
+          referencia?: string | null
+          tipo: string
+          user_id?: string | null
+          visto?: boolean | null
+          visto_at?: string | null
+          visto_por?: string | null
+        }
+        Update: {
+          cliente_codigo?: string | null
+          fecha_alerta?: string
+          id?: string
+          mensaje?: string
+          referencia?: string | null
+          tipo?: string
+          user_id?: string | null
+          visto?: boolean | null
+          visto_at?: string | null
+          visto_por?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           codigo: string
@@ -47,6 +86,36 @@ export type Database = {
           nombre?: string
           tipo_dias?: Database["public"]["Enums"]["dias_tipo"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          cliente_codigo: string
+          comentario: string
+          created_at: string
+          id: string
+          referencia: string | null
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cliente_codigo: string
+          comentario: string
+          created_at?: string
+          id?: string
+          referencia?: string | null
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          cliente_codigo?: string
+          comentario?: string
+          created_at?: string
+          id?: string
+          referencia?: string | null
+          tipo?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -135,6 +204,48 @@ export type Database = {
             referencedColumns: ["codigo"]
           },
         ]
+      }
+      payment_log: {
+        Row: {
+          cliente_codigo: string
+          created_at: string
+          id: string
+          modified_by_upload: boolean | null
+          monto_aplicado: number
+          monto_original: number
+          notas: string | null
+          referencia: string
+          saldo_restante: number
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cliente_codigo: string
+          created_at?: string
+          id?: string
+          modified_by_upload?: boolean | null
+          monto_aplicado: number
+          monto_original: number
+          notas?: string | null
+          referencia: string
+          saldo_restante: number
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          cliente_codigo?: string
+          created_at?: string
+          id?: string
+          modified_by_upload?: boolean | null
+          monto_aplicado?: number
+          monto_original?: number
+          notas?: string | null
+          referencia?: string
+          saldo_restante?: number
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
