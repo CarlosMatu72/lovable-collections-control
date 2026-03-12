@@ -27,6 +27,15 @@ interface ClientSummary {
   dias_prom: number;
 }
 
+interface DashboardKpis {
+  vigente: number;
+  vencido: number;
+  a_favor: number;
+  neto: number;
+  pct_vencido: number;
+  total_facturas: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { role } = useAuth();
@@ -50,6 +59,60 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase.from("clients").select("codigo, nombre");
       return data ?? [];
+    },
+  });
+
+  const { data: kpis, isLoading: isLoadingKpis } = useQuery({
+    queryKey: ["dashboard-kpis"],
+    queryFn: async (): Promise<DashboardKpis> => {
+      const { data, error } = await supabase.rpc("calcular_kpis");
+      if (error) throw error;
+
+      const row = (data?.[0] ?? {}) as Record<string, number | string | null | undefined>;
+      const parsedKpis: DashboardKpis = {
+        vigente: Number(row.vigente ?? 0),
+        vencido: Number(row.vencido ?? 0),
+        a_favor: Number(row.a_favor ?? 0),
+        neto: Number(row.neto ?? 0),
+        pct_vencido: Number(row.pct_vencido ?? 0),
+        total_facturas: Number(row.total_facturas ?? 0),
+      };
+
+      const pageSize = 1000;
+      let from = 0;
+      const verificacion: Array<{ por_cobrar: number | null }> = [];
+
+      while (true) {
+        const { data: chunk, error: chunkError } = await supabase
+          .from("invoices")
+          .select("por_cobrar")
+          .eq("active", true)
+          .range(from, from + pageSize - 1);
+
+        if (chunkError) throw chunkError;
+        if (!chunk?.length) break;
+
+        verificacion.push(...chunk);
+        if (chunk.length < pageSize) break;
+        from += pageSize;
+      }
+
+      const sumaManual = verificacion.reduce((sum, inv) => sum + Number(inv.por_cobrar ?? 0), 0);
+      const diferencia = Math.abs(sumaManual - parsedKpis.neto);
+
+      console.log("KPIs:", parsedKpis);
+      console.log("Verificación:", {
+        facturas_activas: verificacion.length,
+        suma_manual: sumaManual,
+        suma_kpis: parsedKpis.neto,
+        diferencia,
+      });
+
+      if (diferencia > 1) {
+        console.error("⚠️ DISCREPANCIA DETECTADA en totales");
+      }
+
+      return parsedKpis;
     },
   });
 
@@ -102,19 +165,6 @@ export default function Dashboard() {
     return map;
   }, [clients]);
 
-  const kpis = useMemo(() => {
-    if (!invoices?.length) return null;
-    let vigente = 0, vencido = 0, a_favor = 0, neto = 0;
-    invoices.forEach((inv) => {
-      const pc = inv.por_cobrar ?? 0;
-      neto += pc;
-      if (pc < 0) a_favor += Math.abs(pc);
-      else if (inv.status === "vencida") vencido += pc;
-      else if (inv.status === "vigente") vigente += pc;
-    });
-    const pctVencido = neto > 0 ? (vencido / neto) * 100 : 0;
-    return { vigente, vencido, a_favor, neto, pctVencido };
-  }, [invoices]);
 
   const clientSummaries = useMemo(() => {
     if (!invoices?.length) return [];
@@ -172,6 +222,7 @@ export default function Dashboard() {
 
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
   const totalPages = Math.ceil(filtered.length / pageSize);
+  const totalFacturasActivas = kpis?.total_facturas ?? 0;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -225,7 +276,7 @@ export default function Dashboard() {
   const fmtShort = (n: number) =>
     new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
-  if (isLoading) {
+  if (isLoading || isLoadingKpis) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -275,9 +326,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono">{fmt(kpis?.vigente ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter((i) => i.status === "vigente").length} facturas vigentes
-            </p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -287,9 +336,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono text-destructive">{fmt(kpis?.vencido ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter((i) => i.status === "vencida").length} facturas vencidas
-            </p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -299,7 +346,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono" style={{ color: "hsl(var(--info))" }}>{fmt(kpis?.a_favor ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">Pendientes de aplicar</p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -309,7 +356,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono">{fmt(kpis?.neto ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">Total de cartera</p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
       </div>
@@ -318,8 +365,8 @@ export default function Dashboard() {
       <Card>
         <CardContent className="flex items-center gap-4 p-4">
           <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">% Cartera Vencida</span>
-          <Progress value={kpis?.pctVencido ?? 0} className="flex-1" />
-          <span className="text-lg font-bold font-mono">{(kpis?.pctVencido ?? 0).toFixed(1)}%</span>
+          <Progress value={kpis?.pct_vencido ?? 0} className="flex-1" />
+          <span className="text-lg font-bold font-mono">{(kpis?.pct_vencido ?? 0).toFixed(1)}%</span>
         </CardContent>
       </Card>
 

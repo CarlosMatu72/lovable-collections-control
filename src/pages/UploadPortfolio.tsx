@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 interface ParsedRow {
@@ -56,6 +57,7 @@ export default function UploadPortfolio() {
   const [stats, setStats] = useState<PreviewStats | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
+  const [progressDetail, setProgressDetail] = useState({ actual: 0, total: 0, porcentaje: 0 });
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -77,6 +79,47 @@ export default function UploadPortfolio() {
     const d = new Date(String(val));
     return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
   };
+
+  const actualizarStatusVencimientos = useCallback(async () => {
+    const { data: facturas } = await supabase
+      .from("invoices")
+      .select("id, fecha_emision, status, cliente_codigo")
+      .eq("active", true);
+
+    const { data: clientesInfo } = await supabase
+      .from("clients")
+      .select("codigo, dias_credito, tipo_dias");
+
+    if (!facturas || !clientesInfo) return;
+
+    const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
+    clientesInfo.forEach((c) => {
+      clientMap[c.codigo] = c;
+    });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const updates: { id: string; status: "vigente" | "vencida" }[] = [];
+
+    for (const f of facturas) {
+      if (!f.fecha_emision) continue;
+      const client = clientMap[f.cliente_codigo];
+      if (!client) continue;
+
+      const fechaVenc = new Date(f.fecha_emision);
+      fechaVenc.setDate(fechaVenc.getDate() + client.dias_credito);
+      const nuevoStatus: "vigente" | "vencida" = fechaVenc < hoy ? "vencida" : "vigente";
+
+      if (f.status !== nuevoStatus) {
+        updates.push({ id: f.id, status: nuevoStatus });
+      }
+    }
+
+    for (const u of updates) {
+      await supabase.from("invoices").update({ status: u.status }).eq("id", u.id);
+    }
+  }, []);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,8 +160,8 @@ export default function UploadPortfolio() {
         .map(r => {
           const clienteStr = String(r["Cliente"] || "");
           return {
-            cliente_codigo: clienteStr.substring(0, 6).trim(),
-            cliente_nombre: clienteStr.substring(6).trim(),
+            cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
+            cliente_nombre: clienteStr.substring(7).trim(),
             cuenta: String(r["Cuenta"] || ""),
             reference: String(r["Referencia"] || ""),
             fecha_emision: parseDate(r["Fecha"]),
@@ -154,12 +197,24 @@ export default function UploadPortfolio() {
       const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
       const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
 
-      // Check new clients
-      const { data: clientesDB } = await supabase.from("clients").select("codigo");
-      const codigosExistentes = new Set(clientesDB?.map(c => c.codigo) || []);
-      const clientesNuevos = [...new Set(valid.map(r => r.cliente_codigo))].filter(
-        c => !codigosExistentes.has(c)
-      );
+      const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
+      const { data: clientesExistentes } = await supabase
+        .from("clients")
+        .select("codigo")
+        .in("codigo", codigosArchivo);
+
+      const codigosEnBD = new Set(clientesExistentes?.map((c) => c.codigo) || []);
+      const clientesNuevos = codigosArchivo.filter((c) => !codigosEnBD.has(c));
+
+      if (clientesNuevos.length > 0) {
+        console.warn(
+          `Se detectaron ${clientesNuevos.length} clientes que no estaban en el catálogo. Se crearán automáticamente con configuración por defecto.`,
+          clientesNuevos
+        );
+        toast.warning("Clientes nuevos detectados", {
+          description: `${clientesNuevos.length} clientes se agregarán automáticamente: ${clientesNuevos.slice(0, 5).join(", ")}${clientesNuevos.length > 5 ? "..." : ""}`,
+        });
+      }
 
       setStats({ total: valid.length, nuevas, existentes, pagadas, clientesNuevos });
       setStep("preview");
@@ -177,6 +232,7 @@ export default function UploadPortfolio() {
     if (!stats) return;
     setStep("processing");
     setProgress(0);
+    setProgressDetail({ actual: 0, total: parsedRows.length, porcentaje: 0 });
 
     const res: ProcessResult = { nuevas: 0, actualizadas: 0, pagadas: 0, clientesNuevos: 0, errores: [] };
 
@@ -225,19 +281,20 @@ export default function UploadPortfolio() {
         res.pagadas = refsPagadas.length;
       }
 
-      // 3. Upsert invoices in batches
-      const BATCH_SIZE = 500;
-      const totalBatches = Math.ceil(parsedRows.length / BATCH_SIZE);
+      const BATCH_SIZE = 1000;
 
       // Track which are new vs existing
       const refsActualesSet = new Set(facturasActuales?.map(f => f.reference) || []);
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
-        const batchIdx = Math.floor(i / BATCH_SIZE) + 1;
-        setProgressMsg(`Procesando lote ${batchIdx}/${totalBatches}...`);
-        setProgress(20 + Math.round((i / parsedRows.length) * 60));
-
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
+        const procesadas = i + batch.length;
+        const porcentaje = Math.round((procesadas / parsedRows.length) * 100);
+
+        setProgressMsg(`Procesando ${procesadas} de ${parsedRows.length} facturas...`);
+        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje });
+        setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
+
         const invoicesData = batch.map(row => ({
           cliente_codigo: row.cliente_codigo,
           cuenta: row.cuenta,
@@ -305,41 +362,9 @@ export default function UploadPortfolio() {
         console.warn("Reconciliation warning:", reconcileErr);
       }
 
-      // 4. Update vencimiento status
-      setProgressMsg("Calculando vencimientos...");
+      // 4. Programar actualización de vencimientos en background (post-carga)
+      setProgressMsg("Finalizando carga...");
       setProgress(85);
-
-      const { data: facturas } = await supabase
-        .from("invoices")
-        .select("id, fecha_emision, status, cliente_codigo")
-        .eq("active", true);
-
-      const { data: clientesInfo } = await supabase
-        .from("clients")
-        .select("codigo, dias_credito, tipo_dias");
-
-      if (facturas && clientesInfo) {
-        const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
-        clientesInfo.forEach(c => (clientMap[c.codigo] = c));
-
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-
-        const updates: { id: string; status: string }[] = [];
-        for (const f of facturas) {
-          if (!f.fecha_emision) continue;
-          const client = clientMap[f.cliente_codigo];
-          if (!client) continue;
-          const fechaVenc = new Date(f.fecha_emision);
-          fechaVenc.setDate(fechaVenc.getDate() + client.dias_credito);
-          const nuevoStatus = fechaVenc < hoy ? "vencida" : "vigente";
-          if (f.status !== nuevoStatus) updates.push({ id: f.id, status: nuevoStatus });
-        }
-
-        for (const u of updates) {
-          await supabase.from("invoices").update({ status: u.status as "vigente" | "vencida" }).eq("id", u.id);
-        }
-      }
 
       // 5. Log upload
       setProgressMsg("Registrando carga...");
@@ -393,12 +418,19 @@ export default function UploadPortfolio() {
 
       setResult(res);
       setProgress(100);
+      setProgressDetail({ actual: parsedRows.length, total: parsedRows.length, porcentaje: 100 });
       setStep("done");
+
+      setTimeout(() => {
+        actualizarStatusVencimientos()
+          .then(() => console.log("✓ Status de vencimientos actualizado"))
+          .catch((statusErr) => console.warn("Status update warning:", statusErr));
+      }, 1000);
     } catch (err) {
       setErrorMsg(`Error en la carga: ${err instanceof Error ? err.message : String(err)}`);
       setStep("error");
     }
-  }, [parsedRows, stats, fileName]);
+  }, [parsedRows, stats, fileName, actualizarStatusVencimientos]);
 
   const reset = () => {
     setStep("idle");
@@ -407,6 +439,7 @@ export default function UploadPortfolio() {
     setStats(null);
     setProgress(0);
     setProgressMsg("");
+    setProgressDetail({ actual: 0, total: 0, porcentaje: 0 });
     setResult(null);
     setErrorMsg("");
   };
@@ -453,8 +486,14 @@ export default function UploadPortfolio() {
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">{progressMsg}</p>
-            <Progress value={progress} className="w-full max-w-md" />
-            <p className="text-xs text-muted-foreground font-mono">{progress}%</p>
+            <Progress value={progressDetail.total > 0 ? progressDetail.porcentaje : progress} className="w-full max-w-md" />
+            {progressDetail.total > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Procesando {progressDetail.actual} de {progressDetail.total} facturas...
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground font-mono">{progress}%</p>
+            )}
           </CardContent>
         </Card>
       )}
