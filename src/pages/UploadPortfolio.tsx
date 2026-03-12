@@ -186,13 +186,14 @@ export default function UploadPortfolio() {
       setProgressMsg("Comparando con base de datos...");
 
       // Usar CUENTA + CLIENTE como clave única
-      const clavesArchivo = new Set(valid.map(r => `${r.cuenta}|${r.cliente_codigo}`));
+      const normCuenta = (v: string) => String(Math.floor(parseFloat(v || "0")));
+      const clavesArchivo = new Set(valid.map(r => `${normCuenta(r.cuenta)}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("cuenta, cliente_codigo")
         .eq("active", true);
       const clavesActuales = new Set(
-        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
+        (facturasActuales || []).map(f => `${normCuenta(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       const nuevas = [...clavesArchivo].filter(k => !clavesActuales.has(k)).length;
