@@ -163,7 +163,7 @@ export default function UploadPortfolio() {
             cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
             cuenta: String(r["Cuenta"] || ""),
-            reference: String(r["Referencia"] || ""),
+            reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),
             pedimento: r["Pedimento"] ? String(r["Pedimento"]) : null,
             honorarios: parseNumber(r["Honorarios"]),
@@ -185,17 +185,26 @@ export default function UploadPortfolio() {
       setProgress(50);
       setProgressMsg("Comparando con base de datos...");
 
-      // Get current active refs
-      const refsArchivo = new Set(valid.map(r => r.reference));
+      // Get current active refs — normalize for comparison
+      const refsArchivo = new Set(valid.map(r => r.reference)); // already normalized above
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("reference")
         .eq("active", true);
-      const refsActuales = new Set(facturasActuales?.map(f => f.reference) || []);
+      const refsActuales = new Set(
+        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      );
 
       const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
       const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
       const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
+
+      console.log('📊 ANÁLISIS DE SINCRONIZACIÓN:');
+      console.log('Referencias en BD (activas):', refsActuales.size);
+      console.log('Referencias en archivo:', refsArchivo.size);
+      console.log('Nuevas (en archivo, NO en BD):', nuevas);
+      console.log('Existentes (en ambos):', existentes);
+      console.log('Pagadas (en BD, NO en archivo):', pagadas);
 
       const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
@@ -259,13 +268,13 @@ export default function UploadPortfolio() {
       // 2. Mark absent invoices as paid
       setProgressMsg("Marcando facturas pagadas...");
       setProgress(15);
-      const refsArchivo = new Set(parsedRows.map(r => r.reference));
+      const refsArchivo = new Set(parsedRows.map(r => r.reference)); // already normalized
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("reference")
         .eq("active", true);
       const refsPagadas = (facturasActuales || [])
-        .map(f => f.reference)
+        .map(f => String(f.reference || "").trim().toUpperCase())
         .filter(r => !refsArchivo.has(r));
 
       if (refsPagadas.length > 0) {
@@ -284,7 +293,9 @@ export default function UploadPortfolio() {
       const BATCH_SIZE = 1000;
 
       // Track which are new vs existing
-      const refsActualesSet = new Set(facturasActuales?.map(f => f.reference) || []);
+      const refsActualesSet = new Set(
+        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      );
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
