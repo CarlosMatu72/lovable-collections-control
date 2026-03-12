@@ -240,17 +240,19 @@ export default function UploadPortfolio() {
         res.pagadas = refsPagadas.length;
       }
 
-      // 3. Upsert invoices in batches
-      const BATCH_SIZE = 500;
-      const totalBatches = Math.ceil(parsedRows.length / BATCH_SIZE);
+      const BATCH_SIZE = 1000;
 
       // Track which are new vs existing
       const refsActualesSet = new Set(facturasActuales?.map(f => f.reference) || []);
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
-        const batchIdx = Math.floor(i / BATCH_SIZE) + 1;
-        setProgressMsg(`Procesando lote ${batchIdx}/${totalBatches}...`);
-        setProgress(20 + Math.round((i / parsedRows.length) * 60));
+        const batch = parsedRows.slice(i, i + BATCH_SIZE);
+        const procesadas = i + batch.length;
+        const porcentaje = Math.round((procesadas / parsedRows.length) * 100);
+
+        setProgressMsg(`Procesando ${procesadas} de ${parsedRows.length} facturas...`);
+        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje });
+        setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
 
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
         const invoicesData = batch.map(row => ({
