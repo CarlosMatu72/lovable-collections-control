@@ -191,6 +191,7 @@ export default function UploadPortfolio() {
     if (!stats) return;
     setStep("processing");
     setProgress(0);
+    setProgressDetail({ actual: 0, total: parsedRows.length, porcentaje: 0 });
 
     const res: ProcessResult = { nuevas: 0, actualizadas: 0, pagadas: 0, clientesNuevos: 0, errores: [] };
 
