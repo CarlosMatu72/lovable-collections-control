@@ -156,12 +156,24 @@ export default function UploadPortfolio() {
       const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
       const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
 
-      // Check new clients
-      const { data: clientesDB } = await supabase.from("clients").select("codigo");
-      const codigosExistentes = new Set(clientesDB?.map(c => c.codigo) || []);
-      const clientesNuevos = [...new Set(valid.map(r => r.cliente_codigo))].filter(
-        c => !codigosExistentes.has(c)
-      );
+      const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
+      const { data: clientesExistentes } = await supabase
+        .from("clients")
+        .select("codigo")
+        .in("codigo", codigosArchivo);
+
+      const codigosEnBD = new Set(clientesExistentes?.map((c) => c.codigo) || []);
+      const clientesNuevos = codigosArchivo.filter((c) => !codigosEnBD.has(c));
+
+      if (clientesNuevos.length > 0) {
+        console.warn(
+          `Se detectaron ${clientesNuevos.length} clientes que no estaban en el catálogo. Se crearán automáticamente con configuración por defecto.`,
+          clientesNuevos
+        );
+        toast.warning("Clientes nuevos detectados", {
+          description: `${clientesNuevos.length} clientes se agregarán automáticamente: ${clientesNuevos.slice(0, 5).join(", ")}${clientesNuevos.length > 5 ? "..." : ""}`,
+        });
+      }
 
       setStats({ total: valid.length, nuevas, existentes, pagadas, clientesNuevos });
       setStep("preview");
