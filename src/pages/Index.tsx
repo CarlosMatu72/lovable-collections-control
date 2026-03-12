@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Search, Download, AlertTriangle, DollarSign, CreditCard, BarChart3, Users, Clock, Bell, TrendingUp } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback } from "react";
