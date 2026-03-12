@@ -293,7 +293,7 @@ export default function UploadPortfolio() {
 
       // 3. Upsert invoices using cuenta+cliente_codigo as key
       const clavesActualesSet = new Set(
-        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
+        (facturasActuales || []).map(f => `${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       const BATCH_SIZE = 200;
