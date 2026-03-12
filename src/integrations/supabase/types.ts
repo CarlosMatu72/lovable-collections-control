@@ -50,6 +50,24 @@ export type Database = {
         }
         Relationships: []
       }
+      festivos_mexico: {
+        Row: {
+          descripcion: string | null
+          fecha: string
+          id: string
+        }
+        Insert: {
+          descripcion?: string | null
+          fecha: string
+          id?: string
+        }
+        Update: {
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           active: boolean
@@ -151,6 +169,48 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_log: {
+        Row: {
+          archivo_nombre: string
+          clientes_nuevos: number | null
+          created_at: string
+          error_message: string | null
+          facturas_actualizadas: number | null
+          facturas_nuevas: number | null
+          facturas_pagadas: number | null
+          fecha_carga: string
+          id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          archivo_nombre: string
+          clientes_nuevos?: number | null
+          created_at?: string
+          error_message?: string | null
+          facturas_actualizadas?: number | null
+          facturas_nuevas?: number | null
+          facturas_pagadas?: number | null
+          fecha_carga?: string
+          id?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          archivo_nombre?: string
+          clientes_nuevos?: number | null
+          created_at?: string
+          error_message?: string | null
+          facturas_actualizadas?: number | null
+          facturas_nuevas?: number | null
+          facturas_pagadas?: number | null
+          fecha_carga?: string
+          id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -174,6 +234,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calcular_fecha_vencimiento: {
+        Args: {
+          dias_credito: number
+          fecha_inicio: string
+          tipo_dias: Database["public"]["Enums"]["dias_tipo"]
+        }
+        Returns: string
+      }
       get_user_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_status"]

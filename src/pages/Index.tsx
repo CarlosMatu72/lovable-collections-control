@@ -8,8 +8,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Search, Download, AlertTriangle, DollarSign, CreditCard, BarChart3 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback } from "react";
+import * as XLSX from "xlsx";
 
 interface ClientSummary {
   cliente_codigo: string;
@@ -24,6 +25,7 @@ interface ClientSummary {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 20;
@@ -118,6 +120,25 @@ export default function Dashboard() {
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+
+  const handleExport = useCallback(() => {
+    const data = filtered.map(c => ({
+      Código: c.cliente_codigo,
+      Nombre: c.nombre,
+      Vigente: c.vigente,
+      Vencido: c.vencido,
+      "A Favor": c.a_favor,
+      "Saldo Neto": c.neto,
+      "% Vencido": +c.pct_vencido.toFixed(1),
+      "Fact. Vencidas": c.fact_vencidas,
+      "Días Prom.": c.dias_prom,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+    const fecha = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `clientes_${fecha}.xlsx`);
+  }, [filtered]);
 
   if (isLoading) {
     return (
@@ -229,7 +250,7 @@ export default function Dashboard() {
                   className="pl-9 bg-secondary border-border w-full sm:w-64"
                 />
               </div>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={handleExport} title="Exportar a Excel">
                 <Download className="h-4 w-4" />
               </Button>
             </div>
@@ -254,7 +275,7 @@ export default function Dashboard() {
                 <TableRow
                   key={c.cliente_codigo}
                   className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => {}}
+                  onClick={() => navigate(`/clientes/${c.cliente_codigo}`)}
                 >
                   <TableCell>
                     <div>
