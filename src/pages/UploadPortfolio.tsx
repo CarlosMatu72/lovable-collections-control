@@ -439,6 +439,7 @@ export default function UploadPortfolio() {
     setStats(null);
     setProgress(0);
     setProgressMsg("");
+    setProgressDetail({ actual: 0, total: 0, porcentaje: 0 });
     setResult(null);
     setErrorMsg("");
   };
