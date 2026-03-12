@@ -38,7 +38,7 @@ export default function UploadClients() {
     const limite = Number(row["Límite de crédito"] || row["limite_credito"] || row["LIMITE DE CREDITO"] || 0);
     const estadoRaw = String(row["Estado"] || row["estado"] || row["ESTADO"] || "activo").toLowerCase().trim();
 
-    if (!/^\d{1,6}$/.test(codigo)) errs.push(`Fila ${idx + 1}: Código inválido "${codigo}"`);
+    if (!/^[a-zA-Z0-9]{1,7}$/.test(codigo)) errs.push(`Fila ${idx + 1}: Código inválido "${codigo}"`);
     if (!nombre || nombre.length > 200) errs.push(`Fila ${idx + 1}: Nombre inválido`);
     if (isNaN(dias) || dias < 0) errs.push(`Fila ${idx + 1}: Días de crédito inválido`);
     if (isNaN(limite) || limite < 0) errs.push(`Fila ${idx + 1}: Límite de crédito inválido`);
@@ -50,7 +50,7 @@ export default function UploadClients() {
     }
 
     return {
-      codigo: codigo.padStart(6, "0"),
+      codigo: codigo.padStart(7, "0").toUpperCase(),
       nombre,
       dias_credito: dias,
       limite_credito: limite,
