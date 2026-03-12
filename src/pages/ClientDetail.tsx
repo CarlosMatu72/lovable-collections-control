@@ -674,10 +674,18 @@ export default function ClientDetail() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Distribución</CardTitle>
+              <CardTitle className="text-sm">Distribución (6 meses)</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground text-center py-6">Gráfica disponible en Sprint 3</p>
+              <DetailChart data={chartData} />
+              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: "hsl(217 91% 60%)" }} /> Facturación
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: "hsl(160 84% 39%)" }} /> Cobros
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>
