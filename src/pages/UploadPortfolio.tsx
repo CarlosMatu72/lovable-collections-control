@@ -162,7 +162,7 @@ export default function UploadPortfolio() {
           return {
             cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
-            cuenta: String(r["Cuenta"] || ""),
+            cuenta: String(Math.floor(parseFloat(String(r["Cuenta"] || "0")))),
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),
             pedimento: r["Pedimento"] ? String(r["Pedimento"]) : null,
@@ -186,13 +186,14 @@ export default function UploadPortfolio() {
       setProgressMsg("Comparando con base de datos...");
 
       // Usar CUENTA + CLIENTE como clave única
-      const clavesArchivo = new Set(valid.map(r => `${r.cuenta}|${r.cliente_codigo}`));
+      const normCuenta = (v: string) => String(Math.floor(parseFloat(v || "0")));
+      const clavesArchivo = new Set(valid.map(r => `${normCuenta(r.cuenta)}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("cuenta, cliente_codigo")
         .eq("active", true);
       const clavesActuales = new Set(
-        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
+        (facturasActuales || []).map(f => `${normCuenta(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       const nuevas = [...clavesArchivo].filter(k => !clavesActuales.has(k)).length;
@@ -266,14 +267,15 @@ export default function UploadPortfolio() {
       // 2. Mark absent invoices as paid (using cuenta+cliente_codigo)
       setProgressMsg("Marcando facturas pagadas...");
       setProgress(15);
-      const clavesArchivo = new Set(parsedRows.map(r => `${r.cuenta}|${r.cliente_codigo}`));
+      const normCuenta2 = (v: string) => String(Math.floor(parseFloat(v || "0")));
+      const clavesArchivo = new Set(parsedRows.map(r => `${normCuenta2(r.cuenta)}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("id, cuenta, cliente_codigo")
         .eq("active", true);
 
       const facturasPagadas = (facturasActuales || []).filter(
-        f => !clavesArchivo.has(`${f.cuenta}|${f.cliente_codigo}`)
+        f => !clavesArchivo.has(`${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       if (facturasPagadas.length > 0) {
@@ -291,7 +293,7 @@ export default function UploadPortfolio() {
 
       // 3. Upsert invoices using cuenta+cliente_codigo as key
       const clavesActualesSet = new Set(
-        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
+        (facturasActuales || []).map(f => `${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       const BATCH_SIZE = 200;
