@@ -177,7 +177,7 @@ export type Database = {
           cliente_codigo: string
           cobranza: number | null
           created_at: string
-          cuenta: string | null
+          cuenta: string
           fecha_emision: string | null
           honorarios: number | null
           id: string
@@ -196,7 +196,7 @@ export type Database = {
           cliente_codigo: string
           cobranza?: number | null
           created_at?: string
-          cuenta?: string | null
+          cuenta: string
           fecha_emision?: string | null
           honorarios?: number | null
           id?: string
@@ -215,7 +215,7 @@ export type Database = {
           cliente_codigo?: string
           cobranza?: number | null
           created_at?: string
-          cuenta?: string | null
+          cuenta?: string
           fecha_emision?: string | null
           honorarios?: number | null
           id?: string
