@@ -326,9 +326,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono">{fmt(kpis?.vigente ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter((i) => i.status === "vigente").length} facturas vigentes
-            </p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -338,9 +336,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono text-destructive">{fmt(kpis?.vencido ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">
-              {invoices.filter((i) => i.status === "vencida").length} facturas vencidas
-            </p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -350,7 +346,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono" style={{ color: "hsl(var(--info))" }}>{fmt(kpis?.a_favor ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">Pendientes de aplicar</p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
         <Card>
@@ -360,7 +356,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold font-mono">{fmt(kpis?.neto ?? 0)}</p>
-            <p className="text-xs text-muted-foreground">Total de cartera</p>
+            <p className="text-xs text-muted-foreground">{totalFacturasActivas} facturas activas</p>
           </CardContent>
         </Card>
       </div>
