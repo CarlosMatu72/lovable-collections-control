@@ -486,8 +486,14 @@ export default function UploadPortfolio() {
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">{progressMsg}</p>
-            <Progress value={progress} className="w-full max-w-md" />
-            <p className="text-xs text-muted-foreground font-mono">{progress}%</p>
+            <Progress value={progressDetail.total > 0 ? progressDetail.porcentaje : progress} className="w-full max-w-md" />
+            {progressDetail.total > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Procesando {progressDetail.actual} de {progressDetail.total} facturas...
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground font-mono">{progress}%</p>
+            )}
           </CardContent>
         </Card>
       )}
