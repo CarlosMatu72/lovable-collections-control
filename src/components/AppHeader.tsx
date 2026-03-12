@@ -86,10 +86,15 @@ export function AppHeader() {
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
       <div className="flex items-center gap-3">
         <SidebarTrigger />
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar cliente, factura..." className="w-72 pl-9 bg-secondary border-border" />
-        </div>
+        <Button
+          variant="outline"
+          className="hidden md:flex items-center gap-2 w-72 justify-start text-muted-foreground bg-secondary border-border"
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+        >
+          <Search className="h-4 w-4" />
+          <span className="text-sm">Buscar...</span>
+          <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
+        </Button>
       </div>
 
       <div className="flex items-center gap-3">
