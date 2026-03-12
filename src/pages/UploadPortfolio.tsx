@@ -261,7 +261,7 @@ export default function UploadPortfolio() {
           };
         });
         const { error } = await supabase.from("clients").insert(clientesData);
-        if (error) throw error;
+        if (error) throw new Error(error.message || JSON.stringify(error));
         res.clientesNuevos = stats.clientesNuevos.length;
       }
 
