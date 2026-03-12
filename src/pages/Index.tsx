@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Search, Download, AlertTriangle, DollarSign, CreditCard, BarChart3, Users, Clock, Bell, TrendingUp } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback } from "react";
@@ -195,10 +197,48 @@ export default function Dashboard() {
     return `Hace ${days} día${days > 1 ? "s" : ""}`;
   };
 
+  // Chart data - portfolio evolution
+  const chartEvolution = useMemo(() => {
+    if (!invoices?.length) return [];
+    const months: Record<string, { vigente: number; vencido: number }> = {};
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = { vigente: 0, vencido: 0 };
+    }
+    invoices.forEach((inv) => {
+      if (!inv.fecha_emision) return;
+      const key = inv.fecha_emision.substring(0, 7);
+      if (months[key]) {
+        const pc = inv.por_cobrar ?? 0;
+        if (inv.status === "vencida") months[key].vencido += pc;
+        else months[key].vigente += pc;
+      }
+    });
+    return Object.entries(months).map(([mes, vals]) => ({
+      mes: mes.substring(5),
+      ...vals,
+    }));
+  }, [invoices]);
+
+  const fmtShort = (n: number) =>
+    new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
+              <CardContent><Skeleton className="h-8 w-32" /><Skeleton className="h-3 w-20 mt-2" /></CardContent>
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -382,6 +422,37 @@ export default function Dashboard() {
                   {topAFavor.length === 0 && <p className="text-xs text-muted-foreground">Sin datos</p>}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Portfolio Evolution Chart */}
+      {chartEvolution.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Evolución de Cartera — Últimos 6 Meses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartEvolution} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(215 20% 65%)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 65%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => fmtShort(v)} width={50} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(224 24% 18%)", border: "1px solid hsl(220 13% 26%)", borderRadius: 8, fontSize: 12 }}
+                  formatter={(value: number, name: string) => [fmt(value), name === "vigente" ? "Vigente" : "Vencido"]}
+                />
+                <Bar dataKey="vigente" fill="hsl(160 84% 39%)" radius={[3, 3, 0, 0]} name="Vigente" />
+                <Bar dataKey="vencido" fill="hsl(0 84% 60%)" radius={[3, 3, 0, 0]} name="Vencido" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-primary" /> Vigente
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-destructive" /> Vencido
+              </span>
             </div>
           </CardContent>
         </Card>

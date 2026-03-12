@@ -386,6 +386,16 @@ export type Database = {
         }
         Returns: string
       }
+      calcular_kpis: {
+        Args: never
+        Returns: {
+          a_favor: number
+          neto: number
+          pct_vencido: number
+          vencido: number
+          vigente: number
+        }[]
+      }
       get_user_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_status"]

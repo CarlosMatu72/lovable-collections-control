@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
+import { DetailChart } from "@/components/MiniChart";
 import * as XLSX from "xlsx";
 
 const fmt = (n: number) =>
@@ -317,10 +319,40 @@ export default function ClientDetail() {
     return grouped;
   }, [comments]);
 
+  // Chart data - 6 months
+  const chartData = useMemo(() => {
+    if (!activeInvoices) return [];
+    const months: Record<string, { facturacion: number; cobros: number }> = {};
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = { facturacion: 0, cobros: 0 };
+    }
+    activeInvoices.forEach((inv) => {
+      if (!inv.fecha_emision) return;
+      const key = inv.fecha_emision.substring(0, 7);
+      if (months[key]) {
+        months[key].facturacion += inv.total_factura ?? 0;
+        months[key].cobros += inv.cobranza ?? 0;
+      }
+    });
+    return Object.entries(months).map(([mes, vals]) => ({
+      mes: mes.substring(5),
+      ...vals,
+    }));
+  }, [activeInvoices]);
+
   if (!client) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-3 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-96" />
       </div>
     );
   }
@@ -642,10 +674,18 @@ export default function ClientDetail() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Distribución</CardTitle>
+              <CardTitle className="text-sm">Distribución (6 meses)</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground text-center py-6">Gráfica disponible en Sprint 3</p>
+              <DetailChart data={chartData} />
+              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: "hsl(217 91% 60%)" }} /> Facturación
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: "hsl(160 84% 39%)" }} /> Cobros
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>
