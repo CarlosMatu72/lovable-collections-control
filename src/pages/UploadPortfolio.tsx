@@ -185,26 +185,24 @@ export default function UploadPortfolio() {
       setProgress(50);
       setProgressMsg("Comparando con base de datos...");
 
-      // Get current active refs — normalize for comparison
-      const refsArchivo = new Set(valid.map(r => r.reference)); // already normalized above
+      // Usar CUENTA + CLIENTE como clave única
+      const clavesArchivo = new Set(valid.map(r => `${r.cuenta}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
-        .select("reference")
+        .select("cuenta, cliente_codigo")
         .eq("active", true);
-      const refsActuales = new Set(
-        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      const clavesActuales = new Set(
+        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
       );
 
-      const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
-      const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
-      const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
+      const nuevas = [...clavesArchivo].filter(k => !clavesActuales.has(k)).length;
+      const existentes = [...clavesArchivo].filter(k => clavesActuales.has(k)).length;
+      const pagadas = [...clavesActuales].filter(k => !clavesArchivo.has(k)).length;
 
-      console.log('📊 ANÁLISIS DE SINCRONIZACIÓN:');
-      console.log('Referencias en BD (activas):', refsActuales.size);
-      console.log('Referencias en archivo:', refsArchivo.size);
-      console.log('Nuevas (en archivo, NO en BD):', nuevas);
-      console.log('Existentes (en ambos):', existentes);
-      console.log('Pagadas (en BD, NO en archivo):', pagadas);
+      console.log('📊 ANÁLISIS (cuenta+cliente):');
+      console.log('Claves en BD:', clavesActuales.size);
+      console.log('Claves en archivo:', clavesArchivo.size);
+      console.log('Nuevas:', nuevas, 'Existentes:', existentes, 'Pagadas:', pagadas);
 
       const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
