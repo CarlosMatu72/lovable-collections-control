@@ -267,14 +267,15 @@ export default function UploadPortfolio() {
       // 2. Mark absent invoices as paid (using cuenta+cliente_codigo)
       setProgressMsg("Marcando facturas pagadas...");
       setProgress(15);
-      const clavesArchivo = new Set(parsedRows.map(r => `${r.cuenta}|${r.cliente_codigo}`));
+      const normCuenta2 = (v: string) => String(Math.floor(parseFloat(v || "0")));
+      const clavesArchivo = new Set(parsedRows.map(r => `${normCuenta2(r.cuenta)}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("id, cuenta, cliente_codigo")
         .eq("active", true);
 
       const facturasPagadas = (facturasActuales || []).filter(
-        f => !clavesArchivo.has(`${f.cuenta}|${f.cliente_codigo}`)
+        f => !clavesArchivo.has(`${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
       );
 
       if (facturasPagadas.length > 0) {
