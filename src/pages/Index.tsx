@@ -368,8 +368,8 @@ export default function Dashboard() {
       <Card>
         <CardContent className="flex items-center gap-4 p-4">
           <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">% Cartera Vencida</span>
-          <Progress value={kpis?.pctVencido ?? 0} className="flex-1" />
-          <span className="text-lg font-bold font-mono">{(kpis?.pctVencido ?? 0).toFixed(1)}%</span>
+          <Progress value={kpis?.pct_vencido ?? 0} className="flex-1" />
+          <span className="text-lg font-bold font-mono">{(kpis?.pct_vencido ?? 0).toFixed(1)}%</span>
         </CardContent>
       </Card>
 
