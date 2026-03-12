@@ -293,7 +293,9 @@ export default function UploadPortfolio() {
       const BATCH_SIZE = 1000;
 
       // Track which are new vs existing
-      const refsActualesSet = new Set(facturasActuales?.map(f => f.reference) || []);
+      const refsActualesSet = new Set(
+        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      );
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
