@@ -222,6 +222,7 @@ export default function Dashboard() {
 
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
   const totalPages = Math.ceil(filtered.length / pageSize);
+  const totalFacturasActivas = kpis?.total_facturas ?? 0;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
