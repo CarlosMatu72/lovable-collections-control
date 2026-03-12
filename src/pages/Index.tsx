@@ -27,6 +27,15 @@ interface ClientSummary {
   dias_prom: number;
 }
 
+interface DashboardKpis {
+  vigente: number;
+  vencido: number;
+  a_favor: number;
+  neto: number;
+  pct_vencido: number;
+  total_facturas: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { role } = useAuth();
@@ -50,6 +59,60 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase.from("clients").select("codigo, nombre");
       return data ?? [];
+    },
+  });
+
+  const { data: kpis, isLoading: isLoadingKpis } = useQuery({
+    queryKey: ["dashboard-kpis"],
+    queryFn: async (): Promise<DashboardKpis> => {
+      const { data, error } = await supabase.rpc("calcular_kpis");
+      if (error) throw error;
+
+      const row = (data?.[0] ?? {}) as Record<string, number | string | null | undefined>;
+      const parsedKpis: DashboardKpis = {
+        vigente: Number(row.vigente ?? 0),
+        vencido: Number(row.vencido ?? 0),
+        a_favor: Number(row.a_favor ?? 0),
+        neto: Number(row.neto ?? 0),
+        pct_vencido: Number(row.pct_vencido ?? 0),
+        total_facturas: Number(row.total_facturas ?? 0),
+      };
+
+      const pageSize = 1000;
+      let from = 0;
+      const verificacion: Array<{ por_cobrar: number | null }> = [];
+
+      while (true) {
+        const { data: chunk, error: chunkError } = await supabase
+          .from("invoices")
+          .select("por_cobrar")
+          .eq("active", true)
+          .range(from, from + pageSize - 1);
+
+        if (chunkError) throw chunkError;
+        if (!chunk?.length) break;
+
+        verificacion.push(...chunk);
+        if (chunk.length < pageSize) break;
+        from += pageSize;
+      }
+
+      const sumaManual = verificacion.reduce((sum, inv) => sum + Number(inv.por_cobrar ?? 0), 0);
+      const diferencia = Math.abs(sumaManual - parsedKpis.neto);
+
+      console.log("KPIs:", parsedKpis);
+      console.log("Verificación:", {
+        facturas_activas: verificacion.length,
+        suma_manual: sumaManual,
+        suma_kpis: parsedKpis.neto,
+        diferencia,
+      });
+
+      if (diferencia > 1) {
+        console.error("⚠️ DISCREPANCIA DETECTADA en totales");
+      }
+
+      return parsedKpis;
     },
   });
 
