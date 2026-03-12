@@ -418,12 +418,19 @@ export default function UploadPortfolio() {
 
       setResult(res);
       setProgress(100);
+      setProgressDetail({ actual: parsedRows.length, total: parsedRows.length, porcentaje: 100 });
       setStep("done");
+
+      setTimeout(() => {
+        actualizarStatusVencimientos()
+          .then(() => console.log("✓ Status de vencimientos actualizado"))
+          .catch((statusErr) => console.warn("Status update warning:", statusErr));
+      }, 1000);
     } catch (err) {
       setErrorMsg(`Error en la carga: ${err instanceof Error ? err.message : String(err)}`);
       setStep("error");
     }
-  }, [parsedRows, stats, fileName]);
+  }, [parsedRows, stats, fileName, actualizarStatusVencimientos]);
 
   const reset = () => {
     setStep("idle");
