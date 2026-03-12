@@ -1,26 +1,11 @@
 import {
-  LayoutDashboard,
-  Users,
-  Upload,
-  UserPlus,
-  UserCog,
-  History,
-  Settings,
+  LayoutDashboard, Users, Upload, UserPlus, UserCog, History, Settings, Bell, DollarSign, FileText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import { ShieldCheck } from "lucide-react";
 
@@ -34,6 +19,9 @@ const mainItems = [
 const adminItems = [
   { title: "Usuarios", url: "/usuarios", icon: UserCog },
   { title: "Historial", url: "/historial", icon: History },
+  { title: "Alertas", url: "/alertas", icon: Bell },
+  { title: "Pagos Manuales", url: "/pagos", icon: DollarSign },
+  { title: "Auditoría", url: "/auditoria", icon: FileText },
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ];
 
@@ -51,9 +39,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-primary-foreground">
-                Control Cartera
-              </span>
+              <span className="text-sm font-semibold text-sidebar-primary-foreground">Control Cartera</span>
               <span className="text-xs text-sidebar-foreground">Gestión de cobranza</span>
             </div>
           )}
@@ -68,12 +54,7 @@ export function AppSidebar() {
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-primary font-medium"
-                    >
+                    <NavLink to={item.url} end={item.url === "/"} className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -92,11 +73,7 @@ export function AppSidebar() {
                 {adminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        className="hover:bg-sidebar-accent"
-                        activeClassName="bg-sidebar-accent text-primary font-medium"
-                      >
+                      <NavLink to={item.url} className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-primary font-medium">
                         <item.icon className="mr-2 h-4 w-4" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -110,9 +87,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-2">
-        {!collapsed && (
-          <p className="px-2 text-xs text-sidebar-foreground">v1.0.0</p>
-        )}
+        {!collapsed && <p className="px-2 text-xs text-sidebar-foreground">v1.0.0</p>}
       </SidebarFooter>
     </Sidebar>
   );

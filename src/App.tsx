@@ -16,6 +16,9 @@ import UploadPortfolio from "@/pages/UploadPortfolio";
 import AdminUsers from "@/pages/AdminUsers";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+import AlertsPage from "@/pages/AlertsPage";
+import PaymentsReport from "@/pages/PaymentsReport";
+import AuditPage from "@/pages/AuditPage";
 import NotFound from "@/pages/NotFound";
 import { ReactNode } from "react";
 
@@ -34,10 +37,7 @@ function ProtectedRoute({ children, adminOnly = false }: { children: ReactNode; 
 
   if (!session) return <Navigate to="/login" replace />;
 
-  // Admins always have access (status doesn't matter for admins)
-  if (role === "admin") {
-    return <>{children}</>;
-  }
+  if (role === "admin") return <>{children}</>;
 
   if (profile?.status === "pending" || profile?.status === "rejected") {
     return <PendingApproval />;
@@ -64,30 +64,12 @@ const AppRoutes = () => (
       <Route path="/clientes/:codigo" element={<ClientDetail />} />
       <Route path="/cargar-clientes" element={<UploadClients />} />
       <Route path="/cargar-cartera" element={<UploadPortfolio />} />
-      <Route
-        path="/usuarios"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminUsers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/historial"
-        element={
-          <ProtectedRoute adminOnly>
-            <HistoryPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/configuracion"
-        element={
-          <ProtectedRoute adminOnly>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/usuarios" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
+      <Route path="/historial" element={<ProtectedRoute adminOnly><HistoryPage /></ProtectedRoute>} />
+      <Route path="/alertas" element={<ProtectedRoute adminOnly><AlertsPage /></ProtectedRoute>} />
+      <Route path="/pagos" element={<ProtectedRoute adminOnly><PaymentsReport /></ProtectedRoute>} />
+      <Route path="/auditoria" element={<ProtectedRoute adminOnly><AuditPage /></ProtectedRoute>} />
+      <Route path="/configuracion" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
     </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>

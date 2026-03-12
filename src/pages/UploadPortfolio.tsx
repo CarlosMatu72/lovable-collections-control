@@ -357,6 +357,38 @@ export default function UploadPortfolio() {
           status: res.errores.length > 0 ? "warning" : "success",
           error_message: res.errores.length > 0 ? res.errores.join("; ") : null,
         });
+
+        // 6. Generate alerts
+        // 6a. Carga exitosa alert
+        await supabase.from("alerts").insert({
+          tipo: "carga_exitosa",
+          mensaje: `Carga completada: ${res.nuevas} nuevas, ${res.actualizadas} actualizadas, ${res.pagadas} pagadas`,
+          user_id: user.id,
+        });
+
+        // 6b. Detect credit limit exceeded
+        const { data: clientesConLimite } = await supabase
+          .from("clients")
+          .select("codigo, nombre, limite_credito")
+          .gt("limite_credito", 0);
+
+        if (clientesConLimite) {
+          for (const cliente of clientesConLimite) {
+            const { data: facs } = await supabase
+              .from("invoices")
+              .select("por_cobrar")
+              .eq("cliente_codigo", cliente.codigo)
+              .eq("active", true);
+            const total = facs?.reduce((sum, f) => sum + (f.por_cobrar ?? 0), 0) ?? 0;
+            if (total > cliente.limite_credito) {
+              await supabase.from("alerts").insert({
+                tipo: "limite_excedido",
+                mensaje: `${cliente.nombre} excedió su límite: $${total.toFixed(2)} de $${cliente.limite_credito.toFixed(2)}`,
+                cliente_codigo: cliente.codigo,
+              });
+            }
+          }
+        }
       }
 
       setResult(res);
