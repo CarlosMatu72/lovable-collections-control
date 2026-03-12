@@ -427,6 +427,37 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* Portfolio Evolution Chart */}
+      {chartEvolution.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Evolución de Cartera — Últimos 6 Meses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartEvolution} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(215 20% 65%)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(215 20% 65%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => fmtShort(v)} width={50} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(224 24% 18%)", border: "1px solid hsl(220 13% 26%)", borderRadius: 8, fontSize: 12 }}
+                  formatter={(value: number, name: string) => [fmt(value), name === "vigente" ? "Vigente" : "Vencido"]}
+                />
+                <Bar dataKey="vigente" fill="hsl(160 84% 39%)" radius={[3, 3, 0, 0]} name="Vigente" />
+                <Bar dataKey="vencido" fill="hsl(0 84% 60%)" radius={[3, 3, 0, 0]} name="Vencido" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-primary" /> Vigente
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-destructive" /> Vencido
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Client Table */}
       <Card>
         <CardHeader>
