@@ -254,7 +254,6 @@ export default function UploadPortfolio() {
         setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje });
         setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
 
-        const batch = parsedRows.slice(i, i + BATCH_SIZE);
         const invoicesData = batch.map(row => ({
           cliente_codigo: row.cliente_codigo,
           cuenta: row.cuenta,
