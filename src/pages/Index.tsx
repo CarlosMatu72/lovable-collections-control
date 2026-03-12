@@ -165,19 +165,6 @@ export default function Dashboard() {
     return map;
   }, [clients]);
 
-  const kpis = useMemo(() => {
-    if (!invoices?.length) return null;
-    let vigente = 0, vencido = 0, a_favor = 0, neto = 0;
-    invoices.forEach((inv) => {
-      const pc = inv.por_cobrar ?? 0;
-      neto += pc;
-      if (pc < 0) a_favor += Math.abs(pc);
-      else if (inv.status === "vencida") vencido += pc;
-      else if (inv.status === "vigente") vigente += pc;
-    });
-    const pctVencido = neto > 0 ? (vencido / neto) * 100 : 0;
-    return { vigente, vencido, a_favor, neto, pctVencido };
-  }, [invoices]);
 
   const clientSummaries = useMemo(() => {
     if (!invoices?.length) return [];
