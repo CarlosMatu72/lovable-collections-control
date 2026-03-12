@@ -61,6 +61,7 @@ const AppRoutes = () => (
     >
       <Route path="/" element={<Index />} />
       <Route path="/clientes" element={<Clients />} />
+      <Route path="/clientes/:codigo" element={<ClientDetail />} />
       <Route path="/cargar-clientes" element={<UploadClients />} />
       <Route path="/cargar-cartera" element={<UploadPortfolio />} />
       <Route
