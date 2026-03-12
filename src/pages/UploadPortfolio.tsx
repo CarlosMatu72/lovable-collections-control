@@ -119,8 +119,8 @@ export default function UploadPortfolio() {
         .map(r => {
           const clienteStr = String(r["Cliente"] || "");
           return {
-            cliente_codigo: clienteStr.substring(0, 6).trim(),
-            cliente_nombre: clienteStr.substring(6).trim(),
+            cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
+            cliente_nombre: clienteStr.substring(7).trim(),
             cuenta: String(r["Cuenta"] || ""),
             reference: String(r["Referencia"] || ""),
             fecha_emision: parseDate(r["Fecha"]),
