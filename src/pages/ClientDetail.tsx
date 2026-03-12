@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
+import { DetailChart } from "@/components/MiniChart";
 import * as XLSX from "xlsx";
 
 const fmt = (n: number) =>
