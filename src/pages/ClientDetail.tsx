@@ -319,10 +319,40 @@ export default function ClientDetail() {
     return grouped;
   }, [comments]);
 
+  // Chart data - 6 months
+  const chartData = useMemo(() => {
+    if (!activeInvoices) return [];
+    const months: Record<string, { facturacion: number; cobros: number }> = {};
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = { facturacion: 0, cobros: 0 };
+    }
+    activeInvoices.forEach((inv) => {
+      if (!inv.fecha_emision) return;
+      const key = inv.fecha_emision.substring(0, 7);
+      if (months[key]) {
+        months[key].facturacion += inv.total_factura ?? 0;
+        months[key].cobros += inv.cobranza ?? 0;
+      }
+    });
+    return Object.entries(months).map(([mes, vals]) => ({
+      mes: mes.substring(5),
+      ...vals,
+    }));
+  }, [activeInvoices]);
+
   if (!client) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-3 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-96" />
       </div>
     );
   }
