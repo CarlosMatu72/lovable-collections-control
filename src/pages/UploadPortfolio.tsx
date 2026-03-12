@@ -80,7 +80,47 @@ export default function UploadPortfolio() {
     return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
   };
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const actualizarStatusVencimientos = useCallback(async () => {
+    const { data: facturas } = await supabase
+      .from("invoices")
+      .select("id, fecha_emision, status, cliente_codigo")
+      .eq("active", true);
+
+    const { data: clientesInfo } = await supabase
+      .from("clients")
+      .select("codigo, dias_credito, tipo_dias");
+
+    if (!facturas || !clientesInfo) return;
+
+    const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
+    clientesInfo.forEach((c) => {
+      clientMap[c.codigo] = c;
+    });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const updates: { id: string; status: "vigente" | "vencida" }[] = [];
+
+    for (const f of facturas) {
+      if (!f.fecha_emision) continue;
+      const client = clientMap[f.cliente_codigo];
+      if (!client) continue;
+
+      const fechaVenc = new Date(f.fecha_emision);
+      fechaVenc.setDate(fechaVenc.getDate() + client.dias_credito);
+      const nuevoStatus: "vigente" | "vencida" = fechaVenc < hoy ? "vencida" : "vigente";
+
+      if (f.status !== nuevoStatus) {
+        updates.push({ id: f.id, status: nuevoStatus });
+      }
+    }
+
+    for (const u of updates) {
+      await supabase.from("invoices").update({ status: u.status }).eq("id", u.id);
+    }
+  }, []);
+
     const file = e.target.files?.[0];
     if (!file) return;
 
