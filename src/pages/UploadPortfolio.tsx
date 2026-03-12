@@ -268,13 +268,13 @@ export default function UploadPortfolio() {
       // 2. Mark absent invoices as paid
       setProgressMsg("Marcando facturas pagadas...");
       setProgress(15);
-      const refsArchivo = new Set(parsedRows.map(r => r.reference));
+      const refsArchivo = new Set(parsedRows.map(r => r.reference)); // already normalized
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("reference")
         .eq("active", true);
       const refsPagadas = (facturasActuales || [])
-        .map(f => f.reference)
+        .map(f => String(f.reference || "").trim().toUpperCase())
         .filter(r => !refsArchivo.has(r));
 
       if (refsPagadas.length > 0) {
