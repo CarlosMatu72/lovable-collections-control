@@ -57,7 +57,7 @@ export default function UploadPortfolio() {
   const [stats, setStats] = useState<PreviewStats | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
-  const [result, setResult] = useState<ProcessResult | null>(null);
+  const [progressDetail, setProgressDetail] = useState({ actual: 0, total: 0, porcentaje: 0 });
   const [errorMsg, setErrorMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
