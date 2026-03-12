@@ -263,83 +263,89 @@ export default function UploadPortfolio() {
         res.clientesNuevos = stats.clientesNuevos.length;
       }
 
-      // 2. Mark absent invoices as paid
+      // 2. Mark absent invoices as paid (using cuenta+cliente_codigo)
       setProgressMsg("Marcando facturas pagadas...");
       setProgress(15);
-      const refsArchivo = new Set(parsedRows.map(r => r.reference)); // already normalized
+      const clavesArchivo = new Set(parsedRows.map(r => `${r.cuenta}|${r.cliente_codigo}`));
       const { data: facturasActuales } = await supabase
         .from("invoices")
-        .select("reference")
+        .select("id, cuenta, cliente_codigo")
         .eq("active", true);
-      const refsPagadas = (facturasActuales || [])
-        .map(f => String(f.reference || "").trim().toUpperCase())
-        .filter(r => !refsArchivo.has(r));
 
-      if (refsPagadas.length > 0) {
-        // Process in chunks of 500 for the IN clause
-        for (let i = 0; i < refsPagadas.length; i += 500) {
-          const chunk = refsPagadas.slice(i, i + 500);
+      const facturasPagadas = (facturasActuales || []).filter(
+        f => !clavesArchivo.has(`${f.cuenta}|${f.cliente_codigo}`)
+      );
+
+      if (facturasPagadas.length > 0) {
+        for (let i = 0; i < facturasPagadas.length; i += 500) {
+          const chunk = facturasPagadas.slice(i, i + 500);
+          const ids = chunk.map(f => f.id);
           const { error } = await supabase
             .from("invoices")
             .update({ active: false, status: "pagada" as const, paid_date: new Date().toISOString().split("T")[0] })
-            .in("reference", chunk);
+            .in("id", ids);
           if (error) throw new Error(error.message || JSON.stringify(error));
         }
-        res.pagadas = refsPagadas.length;
+        res.pagadas = facturasPagadas.length;
       }
 
-      const BATCH_SIZE = 200;
-
-      // Track which are new vs existing
-      const refsActualesSet = new Set(
-        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      // 3. Upsert invoices using cuenta+cliente_codigo as key
+      const clavesActualesSet = new Set(
+        (facturasActuales || []).map(f => `${f.cuenta}|${f.cliente_codigo}`)
       );
+
+      const BATCH_SIZE = 200;
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
         const procesadas = i + batch.length;
-        const porcentaje = Math.round((procesadas / parsedRows.length) * 100);
 
         setProgressMsg(`Procesando ${procesadas} de ${parsedRows.length} facturas...`);
-        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje });
+        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje: Math.round((procesadas / parsedRows.length) * 100) });
         setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
 
-        const invoicesData = batch.map(row => ({
-          cliente_codigo: row.cliente_codigo,
-          cuenta: row.cuenta,
-          reference: row.reference,
-          fecha_emision: row.fecha_emision,
-          pedimento: row.pedimento,
-          honorarios: row.honorarios,
-          total_factura: row.total_factura,
-          anticipos: row.anticipos,
-          saldo: row.saldo,
-          cobranza: row.cobranza,
-          por_cobrar: row.por_cobrar,
-          active: true,
-          status: "vigente" as const,
-        }));
-
         try {
-          const { error } = await supabase
-            .from("invoices")
-            .upsert(invoicesData, { onConflict: "reference", ignoreDuplicates: false });
+          for (const row of batch) {
+            const invoiceData = {
+              cliente_codigo: row.cliente_codigo,
+              cuenta: row.cuenta,
+              reference: row.reference,
+              fecha_emision: row.fecha_emision,
+              pedimento: row.pedimento,
+              honorarios: row.honorarios,
+              total_factura: row.total_factura,
+              anticipos: row.anticipos,
+              saldo: row.saldo,
+              cobranza: row.cobranza,
+              por_cobrar: row.por_cobrar,
+              active: true,
+              status: "vigente" as const,
+            };
 
-          if (error) {
-            console.error('Error en batch:', error);
-            throw new Error(
-              `Error insertando batch: ${error.message || error.details || JSON.stringify(error)}`
-            );
+            const clave = `${row.cuenta}|${row.cliente_codigo}`;
+            if (clavesActualesSet.has(clave)) {
+              // Update existing by cuenta+cliente
+              const { error } = await supabase
+                .from("invoices")
+                .update(invoiceData)
+                .eq("cuenta", row.cuenta)
+                .eq("cliente_codigo", row.cliente_codigo)
+                .eq("active", true);
+              if (error) throw new Error(`Error actualizando ${row.cuenta}: ${error.message}`);
+              res.actualizadas++;
+            } else {
+              // Insert new
+              const { error } = await supabase
+                .from("invoices")
+                .insert(invoiceData);
+              if (error) throw new Error(`Error insertando ${row.cuenta}: ${error.message}`);
+              res.nuevas++;
+            }
           }
-
-          batch.forEach(r => {
-            if (refsActualesSet.has(r.reference)) res.actualizadas++;
-            else res.nuevas++;
-          });
         } catch (batchError: any) {
           console.error('Error procesando batch:', batchError);
           throw new Error(
-            `Falló el procesamiento en factura ${i + 1}: ${batchError.message || String(batchError)}`
+            `Falló en factura ${i + 1}: ${batchError.message || String(batchError)}`
           );
         }
       }
