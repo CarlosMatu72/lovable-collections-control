@@ -266,6 +266,45 @@ export default function UploadPortfolio() {
         });
       }
 
+      // 3.5 Reconcile manual payments
+      setProgressMsg("Reconciliando pagos manuales...");
+      setProgress(82);
+      try {
+        const { data: pagosM } = await supabase
+          .from("payment_log")
+          .select("referencia, saldo_restante, tipo")
+          .eq("modified_by_upload", false);
+
+        if (pagosM?.length) {
+          const pagosPorRef: Record<string, { saldo_restante: number }> = {};
+          pagosM.forEach((p) => (pagosPorRef[p.referencia] = p));
+
+          const alertas: { tipo: string; mensaje: string; referencia: string }[] = [];
+
+          for (const row of parsedRows) {
+            if (pagosPorRef[row.reference]) {
+              const esperado = pagosPorRef[row.reference].saldo_restante;
+              if (Math.abs(row.por_cobrar - esperado) > 1) {
+                await supabase.from("invoices").update({ por_cobrar: row.por_cobrar }).eq("reference", row.reference);
+                await supabase.from("payment_log").update({ modified_by_upload: true }).eq("referencia", row.reference);
+                alertas.push({
+                  tipo: "pago_restaurado",
+                  mensaje: `Factura ${row.reference} fue modificada manualmente pero el archivo la restauró`,
+                  referencia: row.reference,
+                });
+              }
+            }
+          }
+
+          if (alertas.length > 0) {
+            await supabase.from("alerts").insert(alertas);
+            res.errores.push(`${alertas.length} pago(s) manual(es) fueron sobreescritos por el archivo`);
+          }
+        }
+      } catch (reconcileErr) {
+        console.warn("Reconciliation warning:", reconcileErr);
+      }
+
       // 4. Update vencimiento status
       setProgressMsg("Calculando vencimientos...");
       setProgress(85);

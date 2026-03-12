@@ -10,6 +10,7 @@ import Register from "@/pages/Register";
 import PendingApproval from "@/pages/PendingApproval";
 import Index from "@/pages/Index";
 import Clients from "@/pages/Clients";
+import ClientDetail from "@/pages/ClientDetail";
 import UploadClients from "@/pages/UploadClients";
 import UploadPortfolio from "@/pages/UploadPortfolio";
 import AdminUsers from "@/pages/AdminUsers";
@@ -60,6 +61,7 @@ const AppRoutes = () => (
     >
       <Route path="/" element={<Index />} />
       <Route path="/clientes" element={<Clients />} />
+      <Route path="/clientes/:codigo" element={<ClientDetail />} />
       <Route path="/cargar-clientes" element={<UploadClients />} />
       <Route path="/cargar-cartera" element={<UploadPortfolio />} />
       <Route
