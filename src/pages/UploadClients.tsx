@@ -50,7 +50,7 @@ export default function UploadClients() {
     }
 
     return {
-      codigo: codigo.padStart(6, "0"),
+      codigo: codigo.padStart(7, "0").toUpperCase(),
       nombre,
       dias_credito: dias,
       limite_credito: limite,
