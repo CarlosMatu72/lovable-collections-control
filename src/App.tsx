@@ -10,6 +10,7 @@ import Register from "@/pages/Register";
 import PendingApproval from "@/pages/PendingApproval";
 import Index from "@/pages/Index";
 import Clients from "@/pages/Clients";
+import ClientDetail from "@/pages/ClientDetail";
 import UploadClients from "@/pages/UploadClients";
 import UploadPortfolio from "@/pages/UploadPortfolio";
 import AdminUsers from "@/pages/AdminUsers";
