@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 interface ParsedRow {
