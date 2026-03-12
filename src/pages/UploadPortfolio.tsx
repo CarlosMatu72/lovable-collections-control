@@ -185,17 +185,26 @@ export default function UploadPortfolio() {
       setProgress(50);
       setProgressMsg("Comparando con base de datos...");
 
-      // Get current active refs
-      const refsArchivo = new Set(valid.map(r => r.reference));
+      // Get current active refs — normalize for comparison
+      const refsArchivo = new Set(valid.map(r => r.reference)); // already normalized above
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("reference")
         .eq("active", true);
-      const refsActuales = new Set(facturasActuales?.map(f => f.reference) || []);
+      const refsActuales = new Set(
+        (facturasActuales || []).map(f => String(f.reference || "").trim().toUpperCase())
+      );
 
       const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
       const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
       const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
+
+      console.log('📊 ANÁLISIS DE SINCRONIZACIÓN:');
+      console.log('Referencias en BD (activas):', refsActuales.size);
+      console.log('Referencias en archivo:', refsArchivo.size);
+      console.log('Nuevas (en archivo, NO en BD):', nuevas);
+      console.log('Existentes (en ambos):', existentes);
+      console.log('Pagadas (en BD, NO en archivo):', pagadas);
 
       const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
