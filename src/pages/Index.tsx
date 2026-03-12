@@ -276,7 +276,7 @@ export default function Dashboard() {
   const fmtShort = (n: number) =>
     new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
-  if (isLoading) {
+  if (isLoading || isLoadingKpis) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
