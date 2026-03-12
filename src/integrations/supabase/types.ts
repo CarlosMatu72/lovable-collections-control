@@ -14,16 +14,184 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          codigo: string
+          created_at: string
+          dias_credito: number
+          estado: Database["public"]["Enums"]["client_status"]
+          id: string
+          limite_credito: number
+          nombre: string
+          tipo_dias: Database["public"]["Enums"]["dias_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          dias_credito?: number
+          estado?: Database["public"]["Enums"]["client_status"]
+          id?: string
+          limite_credito?: number
+          nombre: string
+          tipo_dias?: Database["public"]["Enums"]["dias_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          dias_credito?: number
+          estado?: Database["public"]["Enums"]["client_status"]
+          id?: string
+          limite_credito?: number
+          nombre?: string
+          tipo_dias?: Database["public"]["Enums"]["dias_tipo"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          active: boolean
+          anticipos: number | null
+          cliente_codigo: string
+          cobranza: number | null
+          created_at: string
+          cuenta: string | null
+          fecha_emision: string | null
+          honorarios: number | null
+          id: string
+          paid_date: string | null
+          pedimento: string | null
+          por_cobrar: number | null
+          reference: string
+          saldo: number | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          total_factura: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          anticipos?: number | null
+          cliente_codigo: string
+          cobranza?: number | null
+          created_at?: string
+          cuenta?: string | null
+          fecha_emision?: string | null
+          honorarios?: number | null
+          id?: string
+          paid_date?: string | null
+          pedimento?: string | null
+          por_cobrar?: number | null
+          reference: string
+          saldo?: number | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_factura?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          anticipos?: number | null
+          cliente_codigo?: string
+          cobranza?: number | null
+          created_at?: string
+          cuenta?: string | null
+          fecha_emision?: string | null
+          honorarios?: number | null
+          id?: string
+          paid_date?: string | null
+          pedimento?: string | null
+          por_cobrar?: number | null
+          reference?: string
+          saldo?: number | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_factura?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_cliente_codigo_fkey"
+            columns: ["cliente_codigo"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          id: string
+          name: string
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_status: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_status"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "normal"
+      client_status: "activo" | "inactivo"
+      dias_tipo: "naturales" | "habiles"
+      invoice_status: "vigente" | "vencida" | "pagada" | "abono_parcial"
+      user_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +318,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "normal"],
+      client_status: ["activo", "inactivo"],
+      dias_tipo: ["naturales", "habiles"],
+      invoice_status: ["vigente", "vencida", "pagada", "abono_parcial"],
+      user_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const
