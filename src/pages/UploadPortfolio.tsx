@@ -162,7 +162,7 @@ export default function UploadPortfolio() {
           return {
             cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
-            cuenta: String(r["Cuenta"] || ""),
+            cuenta: String(Math.floor(parseFloat(String(r["Cuenta"] || "0")))),
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),
             pedimento: r["Pedimento"] ? String(r["Pedimento"]) : null,
