@@ -203,7 +203,30 @@ export default function UploadPortfolio() {
       // Use deduplicated from here
       const validFinal = deduplicated;
 
-      const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
+      setParsedRows(validFinal);
+      setProgress(50);
+      setProgressMsg("Comparando con base de datos...");
+
+      console.log('🔥 VERSIÓN: USANDO REFERENCE ÚNICA 🔥');
+
+      const refsArchivo = new Set(validFinal.map(r => r.reference));
+
+      const { data: facturasActuales } = await supabase
+        .from("invoices")
+        .select("reference")
+        .eq("active", true);
+
+      const refsActuales = new Set(
+        (facturasActuales || []).map(f => f.reference)
+      );
+
+      const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
+      const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
+      const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
+
+      console.log('📊 ANÁLISIS (reference):', { enBD: refsActuales.size, enArchivo: refsArchivo.size, nuevas, existentes, pagadas });
+
+      const codigosArchivo = [...new Set(validFinal.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
         .from("clients")
         .select("codigo")
@@ -213,16 +236,12 @@ export default function UploadPortfolio() {
       const clientesNuevos = codigosArchivo.filter((c) => !codigosEnBD.has(c));
 
       if (clientesNuevos.length > 0) {
-        console.warn(
-          `Se detectaron ${clientesNuevos.length} clientes que no estaban en el catálogo. Se crearán automáticamente con configuración por defecto.`,
-          clientesNuevos
-        );
         toast.warning("Clientes nuevos detectados", {
           description: `${clientesNuevos.length} clientes se agregarán automáticamente: ${clientesNuevos.slice(0, 5).join(", ")}${clientesNuevos.length > 5 ? "..." : ""}`,
         });
       }
 
-      setStats({ total: valid.length, nuevas, existentes, pagadas, clientesNuevos });
+      setStats({ total: validFinal.length, nuevas, existentes, pagadas, clientesNuevos });
       setStep("preview");
       setProgress(100);
     } catch (err) {
