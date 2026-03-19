@@ -182,75 +182,26 @@ export default function UploadPortfolio() {
           };
         });
 
-      console.log("✅ Filas válidas procesadas:", valid.length);
-      console.log("✅ Primera cuenta normalizada:", valid[0]?.cuenta);
-      console.log("✅ Primeras 3 cuentas:", valid.slice(0, 3).map(v => v.cuenta));
+      // DEDUPLICAR por reference (guardar última ocurrencia)
+      const uniqueMap = new Map<string, ParsedRow>();
+      valid.forEach(row => uniqueMap.set(row.reference, row));
+      const deduplicated = Array.from(uniqueMap.values());
+      if (deduplicated.length < valid.length) {
+        const dupes = valid.length - deduplicated.length;
+        console.warn(`⚠️ Eliminados ${dupes} duplicados del archivo`);
+        toast.warning(`Se encontraron ${dupes} facturas duplicadas y se usó la última versión`);
+      }
 
-      if (valid.length === 0) {
+      console.log("✅ Filas válidas:", deduplicated.length);
+
+      if (deduplicated.length === 0) {
         setErrorMsg("No se encontraron filas válidas en el archivo");
         setStep("error");
         return;
       }
 
-      setParsedRows(valid);
-      setProgress(50);
-      setProgressMsg("Comparando con base de datos...");
-
-      // ============================================
-      // DEBUG: VERSIÓN DEL CÓDIGO
-      console.log("🔥🔥🔥 VERSIÓN: USANDO CUENTA+CLIENTE 🔥🔥🔥");
-      console.log("Timestamp:", new Date().toISOString());
-      // ============================================
-
-      // Usar CUENTA + CLIENTE como clave única
-      const normCuenta = (v: string) => {
-        const result = String(Math.floor(parseFloat(v || "0")));
-        return result;
-      };
-
-      // Log de normalización
-      console.log("🔧 Función normCuenta definida");
-
-      const clavesArchivo = new Set(valid.map(r => {
-        const cuentaNorm = normCuenta(r.cuenta);
-        const clave = `${cuentaNorm}|${r.cliente_codigo}`;
-        return clave;
-      }));
-
-      console.log("📦 Claves archivo generadas:", clavesArchivo.size);
-      console.log("📦 Ejemplo clave archivo:", Array.from(clavesArchivo)[0]);
-
-      const { data: facturasActuales } = await supabase
-        .from("invoices")
-        .select("cuenta, cliente_codigo")
-        .eq("active", true);
-      const clavesActuales = new Set(
-        (facturasActuales || []).map(f => `${normCuenta(f.cuenta)}|${f.cliente_codigo}`)
-      );
-
-      const nuevas = [...clavesArchivo].filter(k => !clavesActuales.has(k)).length;
-      const existentes = [...clavesArchivo].filter(k => clavesActuales.has(k)).length;
-      const pagadas = [...clavesActuales].filter(k => !clavesArchivo.has(k)).length;
-
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📊 ANÁLISIS SINCRONIZACIÓN (cuenta+cliente):");
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("Claves en BD:", clavesActuales.size);
-      console.log("Claves en archivo:", clavesArchivo.size);
-      console.log("───────────────────────────────────────");
-      console.log("🆕 NUEVAS:", nuevas);
-      console.log("🔄 EXISTENTES:", existentes);
-      console.log("💰 PAGADAS:", pagadas);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      const suma = nuevas + existentes;
-      if (suma !== clavesArchivo.size) {
-        console.error("⚠️ ERROR: Suma no coincide");
-        console.error(`${nuevas} + ${existentes} = ${suma} ≠ ${clavesArchivo.size}`);
-      }
-
-      console.log("Ejemplos de claves en BD:", Array.from(clavesActuales).slice(0, 3));
-      console.log("Ejemplos de claves en archivo:", Array.from(clavesArchivo).slice(0, 3));
+      // Use deduplicated from here
+      const validFinal = deduplicated;
 
       const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
