@@ -12,9 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-// BUILD VERSION: 2026-03-12-FIX-SYNC-v2
-// Esta línea fuerza un rebuild del archivo
-const BUILD_VERSION = "2026-03-12-19:00:00";
+// BUILD VERSION: 2026-03-19-REFERENCE-UNIQUE
+const BUILD_VERSION = "2026-03-19-REFERENCE-UNIQUE";
 console.log("📦 Build version:", BUILD_VERSION);
 
 interface ParsedRow {
@@ -183,77 +182,51 @@ export default function UploadPortfolio() {
           };
         });
 
-      console.log("✅ Filas válidas procesadas:", valid.length);
-      console.log("✅ Primera cuenta normalizada:", valid[0]?.cuenta);
-      console.log("✅ Primeras 3 cuentas:", valid.slice(0, 3).map(v => v.cuenta));
+      // DEDUPLICAR por reference (guardar última ocurrencia)
+      const uniqueMap = new Map<string, ParsedRow>();
+      valid.forEach(row => uniqueMap.set(row.reference, row));
+      const deduplicated = Array.from(uniqueMap.values());
+      if (deduplicated.length < valid.length) {
+        const dupes = valid.length - deduplicated.length;
+        console.warn(`⚠️ Eliminados ${dupes} duplicados del archivo`);
+        toast.warning(`Se encontraron ${dupes} facturas duplicadas y se usó la última versión`);
+      }
 
-      if (valid.length === 0) {
+      console.log("✅ Filas válidas:", deduplicated.length);
+
+      if (deduplicated.length === 0) {
         setErrorMsg("No se encontraron filas válidas en el archivo");
         setStep("error");
         return;
       }
 
-      setParsedRows(valid);
+      // Use deduplicated from here
+      const validFinal = deduplicated;
+
+      setParsedRows(validFinal);
       setProgress(50);
       setProgressMsg("Comparando con base de datos...");
 
-      // ============================================
-      // DEBUG: VERSIÓN DEL CÓDIGO
-      console.log("🔥🔥🔥 VERSIÓN: USANDO CUENTA+CLIENTE 🔥🔥🔥");
-      console.log("Timestamp:", new Date().toISOString());
-      // ============================================
+      console.log('🔥 VERSIÓN: USANDO REFERENCE ÚNICA 🔥');
 
-      // Usar CUENTA + CLIENTE como clave única
-      const normCuenta = (v: string) => {
-        const result = String(Math.floor(parseFloat(v || "0")));
-        return result;
-      };
-
-      // Log de normalización
-      console.log("🔧 Función normCuenta definida");
-
-      const clavesArchivo = new Set(valid.map(r => {
-        const cuentaNorm = normCuenta(r.cuenta);
-        const clave = `${cuentaNorm}|${r.cliente_codigo}`;
-        return clave;
-      }));
-
-      console.log("📦 Claves archivo generadas:", clavesArchivo.size);
-      console.log("📦 Ejemplo clave archivo:", Array.from(clavesArchivo)[0]);
+      const refsArchivo = new Set(validFinal.map(r => r.reference));
 
       const { data: facturasActuales } = await supabase
         .from("invoices")
-        .select("cuenta, cliente_codigo")
+        .select("reference")
         .eq("active", true);
-      const clavesActuales = new Set(
-        (facturasActuales || []).map(f => `${normCuenta(f.cuenta)}|${f.cliente_codigo}`)
+
+      const refsActuales = new Set(
+        (facturasActuales || []).map(f => f.reference)
       );
 
-      const nuevas = [...clavesArchivo].filter(k => !clavesActuales.has(k)).length;
-      const existentes = [...clavesArchivo].filter(k => clavesActuales.has(k)).length;
-      const pagadas = [...clavesActuales].filter(k => !clavesArchivo.has(k)).length;
+      const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
+      const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
+      const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
 
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("📊 ANÁLISIS SINCRONIZACIÓN (cuenta+cliente):");
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("Claves en BD:", clavesActuales.size);
-      console.log("Claves en archivo:", clavesArchivo.size);
-      console.log("───────────────────────────────────────");
-      console.log("🆕 NUEVAS:", nuevas);
-      console.log("🔄 EXISTENTES:", existentes);
-      console.log("💰 PAGADAS:", pagadas);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log('📊 ANÁLISIS (reference):', { enBD: refsActuales.size, enArchivo: refsArchivo.size, nuevas, existentes, pagadas });
 
-      const suma = nuevas + existentes;
-      if (suma !== clavesArchivo.size) {
-        console.error("⚠️ ERROR: Suma no coincide");
-        console.error(`${nuevas} + ${existentes} = ${suma} ≠ ${clavesArchivo.size}`);
-      }
-
-      console.log("Ejemplos de claves en BD:", Array.from(clavesActuales).slice(0, 3));
-      console.log("Ejemplos de claves en archivo:", Array.from(clavesArchivo).slice(0, 3));
-
-      const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
+      const codigosArchivo = [...new Set(validFinal.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
         .from("clients")
         .select("codigo")
@@ -263,16 +236,12 @@ export default function UploadPortfolio() {
       const clientesNuevos = codigosArchivo.filter((c) => !codigosEnBD.has(c));
 
       if (clientesNuevos.length > 0) {
-        console.warn(
-          `Se detectaron ${clientesNuevos.length} clientes que no estaban en el catálogo. Se crearán automáticamente con configuración por defecto.`,
-          clientesNuevos
-        );
         toast.warning("Clientes nuevos detectados", {
           description: `${clientesNuevos.length} clientes se agregarán automáticamente: ${clientesNuevos.slice(0, 5).join(", ")}${clientesNuevos.length > 5 ? "..." : ""}`,
         });
       }
 
-      setStats({ total: valid.length, nuevas, existentes, pagadas, clientesNuevos });
+      setStats({ total: validFinal.length, nuevas, existentes, pagadas, clientesNuevos });
       setStep("preview");
       setProgress(100);
     } catch (err) {
@@ -312,43 +281,39 @@ export default function UploadPortfolio() {
         res.clientesNuevos = stats.clientesNuevos.length;
       }
 
-      // 2. Mark absent invoices as paid (using cuenta+cliente_codigo)
+      // 2. Mark absent invoices as paid (using reference)
       setProgressMsg("Marcando facturas pagadas...");
-      console.log("🔥 handleConfirm - Procesando pagadas");
       setProgress(15);
-      const normCuenta2 = (v: string) => String(Math.floor(parseFloat(v || "0")));
-      const clavesArchivo = new Set(
-        parsedRows.map(r => `${normCuenta2(r.cuenta)}|${r.cliente_codigo}`)
-      );
-      console.log("Claves archivo en handleConfirm:", clavesArchivo.size);
+
+      const refsArchivo = new Set(parsedRows.map(r => r.reference));
+
       const { data: facturasActuales } = await supabase
         .from("invoices")
-        .select("id, cuenta, cliente_codigo")
+        .select("reference")
         .eq("active", true);
 
-      const facturasPagadas = (facturasActuales || []).filter(
-        f => !clavesArchivo.has(`${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
-      );
+      const refsPagadas = (facturasActuales || [])
+        .map(f => f.reference)
+        .filter(r => !refsArchivo.has(r));
 
-      if (facturasPagadas.length > 0) {
-        for (let i = 0; i < facturasPagadas.length; i += 500) {
-          const chunk = facturasPagadas.slice(i, i + 500);
-          const ids = chunk.map(f => f.id);
+      if (refsPagadas.length > 0) {
+        for (let i = 0; i < refsPagadas.length; i += 500) {
+          const chunk = refsPagadas.slice(i, i + 500);
           const { error } = await supabase
             .from("invoices")
             .update({ active: false, status: "pagada" as const, paid_date: new Date().toISOString().split("T")[0] })
-            .in("id", ids);
+            .in("reference", chunk);
           if (error) throw new Error(error.message || JSON.stringify(error));
         }
-        res.pagadas = facturasPagadas.length;
+        res.pagadas = refsPagadas.length;
       }
 
-      // 3. Upsert invoices using cuenta+cliente_codigo as key
-      const clavesActualesSet = new Set(
-        (facturasActuales || []).map(f => `${normCuenta2(f.cuenta)}|${f.cliente_codigo}`)
+      // 3. Upsert invoices using reference as unique key
+      const refsActualesSet = new Set(
+        (facturasActuales || []).map(f => f.reference)
       );
 
-      const BATCH_SIZE = 200;
+      const BATCH_SIZE = 500;
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
@@ -358,49 +323,40 @@ export default function UploadPortfolio() {
         setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje: Math.round((procesadas / parsedRows.length) * 100) });
         setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
 
-        try {
-          for (const row of batch) {
-            const invoiceData = {
-              cliente_codigo: row.cliente_codigo,
-              cuenta: row.cuenta,
-              reference: row.reference,
-              fecha_emision: row.fecha_emision,
-              pedimento: row.pedimento,
-              honorarios: row.honorarios,
-              total_factura: row.total_factura,
-              anticipos: row.anticipos,
-              saldo: row.saldo,
-              cobranza: row.cobranza,
-              por_cobrar: row.por_cobrar,
-              active: true,
-              status: "vigente" as const,
-            };
+        const invoicesData = batch.map(row => ({
+          cliente_codigo: row.cliente_codigo,
+          cuenta: row.cuenta,
+          reference: row.reference,
+          fecha_emision: row.fecha_emision,
+          pedimento: row.pedimento,
+          honorarios: row.honorarios,
+          total_factura: row.total_factura,
+          anticipos: row.anticipos,
+          saldo: row.saldo,
+          cobranza: row.cobranza,
+          por_cobrar: row.por_cobrar,
+          active: true,
+          status: "vigente" as const,
+        }));
 
-            const clave = `${row.cuenta}|${row.cliente_codigo}`;
-            if (clavesActualesSet.has(clave)) {
-              // Update existing by cuenta+cliente
-              const { error } = await supabase
-                .from("invoices")
-                .update(invoiceData)
-                .eq("cuenta", row.cuenta)
-                .eq("cliente_codigo", row.cliente_codigo)
-                .eq("active", true);
-              if (error) throw new Error(`Error actualizando ${row.cuenta}: ${error.message}`);
+        try {
+          const { error } = await supabase
+            .from("invoices")
+            .upsert(invoicesData, { onConflict: "reference", ignoreDuplicates: false });
+
+          if (error) throw new Error(`Error en batch: ${error.message}`);
+
+          batch.forEach(r => {
+            if (refsActualesSet.has(r.reference)) {
               res.actualizadas++;
             } else {
-              // Insert new
-              const { error } = await supabase
-                .from("invoices")
-                .insert(invoiceData);
-              if (error) throw new Error(`Error insertando ${row.cuenta}: ${error.message}`);
               res.nuevas++;
+              refsActualesSet.add(r.reference);
             }
-          }
+          });
         } catch (batchError: any) {
           console.error('Error procesando batch:', batchError);
-          throw new Error(
-            `Falló en factura ${i + 1}: ${batchError.message || String(batchError)}`
-          );
+          throw new Error(`Error en factura ${i + 1}: ${batchError.message || String(batchError)}`);
         }
       }
 
