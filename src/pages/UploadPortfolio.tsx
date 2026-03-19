@@ -12,6 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+// BUILD VERSION: 2026-03-12-FIX-SYNC-v2
+// Esta línea fuerza un rebuild del archivo
+const BUILD_VERSION = "2026-03-12-19:00:00";
+console.log("📦 Build version:", BUILD_VERSION);
+
 interface ParsedRow {
   cliente_codigo: string;
   cliente_nombre: string;
@@ -159,10 +164,13 @@ export default function UploadPortfolio() {
         .filter(r => r["Cliente"] && r["Cuenta"] && r["Referencia"])
         .map(r => {
           const clienteStr = String(r["Cliente"] || "");
+          const cuentaRaw = r["Cuenta"];
+          const cuentaNorm = String(Math.floor(parseFloat(String(cuentaRaw || "0"))));
+
           return {
             cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
-            cuenta: String(Math.floor(parseFloat(String(r["Cuenta"] || "0")))),
+            cuenta: cuentaNorm,
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),
             pedimento: r["Pedimento"] ? String(r["Pedimento"]) : null,
@@ -175,6 +183,10 @@ export default function UploadPortfolio() {
           };
         });
 
+      console.log("✅ Filas válidas procesadas:", valid.length);
+      console.log("✅ Primera cuenta normalizada:", valid[0]?.cuenta);
+      console.log("✅ Primeras 3 cuentas:", valid.slice(0, 3).map(v => v.cuenta));
+
       if (valid.length === 0) {
         setErrorMsg("No se encontraron filas válidas en el archivo");
         setStep("error");
@@ -185,9 +197,30 @@ export default function UploadPortfolio() {
       setProgress(50);
       setProgressMsg("Comparando con base de datos...");
 
+      // ============================================
+      // DEBUG: VERSIÓN DEL CÓDIGO
+      console.log("🔥🔥🔥 VERSIÓN: USANDO CUENTA+CLIENTE 🔥🔥🔥");
+      console.log("Timestamp:", new Date().toISOString());
+      // ============================================
+
       // Usar CUENTA + CLIENTE como clave única
-      const normCuenta = (v: string) => String(Math.floor(parseFloat(v || "0")));
-      const clavesArchivo = new Set(valid.map(r => `${normCuenta(r.cuenta)}|${r.cliente_codigo}`));
+      const normCuenta = (v: string) => {
+        const result = String(Math.floor(parseFloat(v || "0")));
+        return result;
+      };
+
+      // Log de normalización
+      console.log("🔧 Función normCuenta definida");
+
+      const clavesArchivo = new Set(valid.map(r => {
+        const cuentaNorm = normCuenta(r.cuenta);
+        const clave = `${cuentaNorm}|${r.cliente_codigo}`;
+        return clave;
+      }));
+
+      console.log("📦 Claves archivo generadas:", clavesArchivo.size);
+      console.log("📦 Ejemplo clave archivo:", Array.from(clavesArchivo)[0]);
+
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("cuenta, cliente_codigo")
@@ -200,10 +233,25 @@ export default function UploadPortfolio() {
       const existentes = [...clavesArchivo].filter(k => clavesActuales.has(k)).length;
       const pagadas = [...clavesActuales].filter(k => !clavesArchivo.has(k)).length;
 
-      console.log('📊 ANÁLISIS (cuenta+cliente):');
-      console.log('Claves en BD:', clavesActuales.size);
-      console.log('Claves en archivo:', clavesArchivo.size);
-      console.log('Nuevas:', nuevas, 'Existentes:', existentes, 'Pagadas:', pagadas);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("📊 ANÁLISIS SINCRONIZACIÓN (cuenta+cliente):");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("Claves en BD:", clavesActuales.size);
+      console.log("Claves en archivo:", clavesArchivo.size);
+      console.log("───────────────────────────────────────");
+      console.log("🆕 NUEVAS:", nuevas);
+      console.log("🔄 EXISTENTES:", existentes);
+      console.log("💰 PAGADAS:", pagadas);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      const suma = nuevas + existentes;
+      if (suma !== clavesArchivo.size) {
+        console.error("⚠️ ERROR: Suma no coincide");
+        console.error(`${nuevas} + ${existentes} = ${suma} ≠ ${clavesArchivo.size}`);
+      }
+
+      console.log("Ejemplos de claves en BD:", Array.from(clavesActuales).slice(0, 3));
+      console.log("Ejemplos de claves en archivo:", Array.from(clavesArchivo).slice(0, 3));
 
       const codigosArchivo = [...new Set(valid.map((row) => row.cliente_codigo))];
       const { data: clientesExistentes } = await supabase
@@ -266,9 +314,13 @@ export default function UploadPortfolio() {
 
       // 2. Mark absent invoices as paid (using cuenta+cliente_codigo)
       setProgressMsg("Marcando facturas pagadas...");
+      console.log("🔥 handleConfirm - Procesando pagadas");
       setProgress(15);
       const normCuenta2 = (v: string) => String(Math.floor(parseFloat(v || "0")));
-      const clavesArchivo = new Set(parsedRows.map(r => `${normCuenta2(r.cuenta)}|${r.cliente_codigo}`));
+      const clavesArchivo = new Set(
+        parsedRows.map(r => `${normCuenta2(r.cuenta)}|${r.cliente_codigo}`)
+      );
+      console.log("Claves archivo en handleConfirm:", clavesArchivo.size);
       const { data: facturasActuales } = await supabase
         .from("invoices")
         .select("id, cuenta, cliente_codigo")
