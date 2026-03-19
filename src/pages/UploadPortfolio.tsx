@@ -12,9 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-// BUILD VERSION: 2026-03-12-FIX-SYNC-v2
-// Esta línea fuerza un rebuild del archivo
-const BUILD_VERSION = "2026-03-12-19:00:00";
+// BUILD VERSION: 2026-03-19-REFERENCE-UNIQUE
+const BUILD_VERSION = "2026-03-19-REFERENCE-UNIQUE";
 console.log("📦 Build version:", BUILD_VERSION);
 
 interface ParsedRow {
