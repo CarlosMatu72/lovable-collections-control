@@ -366,25 +366,61 @@ export default function UploadPortfolio() {
       try {
         const { data: pagosM } = await supabase
           .from("payment_log")
-          .select("referencia, saldo_restante, tipo")
-          .eq("modified_by_upload", false);
+          .select("*")
+          .eq("modified_by_upload", false)
+          .order("created_at", { ascending: false });
 
-        if (pagosM?.length) {
-          const pagosPorRef: Record<string, { saldo_restante: number }> = {};
-          pagosM.forEach((p) => (pagosPorRef[p.referencia] = p));
+        if (pagosM && pagosM.length > 0) {
+          console.log(`📝 Encontrados ${pagosM.length} pagos manuales a reconciliar`);
 
-          const alertas: { tipo: string; mensaje: string; referencia: string }[] = [];
+          const alertas: Array<{
+            tipo: string;
+            mensaje: string;
+            referencia: string;
+            cliente_codigo: string;
+            metadata: Record<string, string | number | null>;
+          }> = [];
 
-          for (const row of parsedRows) {
-            if (pagosPorRef[row.reference]) {
-              const esperado = pagosPorRef[row.reference].saldo_restante;
-              if (Math.abs(row.por_cobrar - esperado) > 1) {
-                await supabase.from("invoices").update({ por_cobrar: row.por_cobrar }).eq("reference", row.reference);
-                await supabase.from("payment_log").update({ modified_by_upload: true }).eq("referencia", row.reference);
+          for (const pago of pagosM) {
+            const facturaEnArchivo = parsedRows.find(
+              row => row.reference === pago.referencia && row.cliente_codigo === pago.cliente_codigo
+            );
+
+            if (facturaEnArchivo) {
+              const montoArchivo = facturaEnArchivo.por_cobrar;
+              const montoEsperado = pago.saldo_restante;
+              const diferencia = Math.abs(montoArchivo - montoEsperado);
+
+              if (diferencia > 1) {
+                console.warn(
+                  `⚠️ Diferencia en ${pago.referencia}: Manual=$${montoEsperado.toFixed(2)} vs Archivo=$${montoArchivo.toFixed(2)}`
+                );
+
+                await supabase
+                  .from("invoices")
+                  .update({ por_cobrar: montoArchivo })
+                  .eq("reference", pago.referencia)
+                  .eq("cliente_codigo", pago.cliente_codigo);
+
+                await supabase
+                  .from("payment_log")
+                  .update({ modified_by_upload: true, modified_at: new Date().toISOString() })
+                  .eq("id", pago.id);
+
                 alertas.push({
                   tipo: "pago_restaurado",
-                  mensaje: `Factura ${row.reference} fue modificada manualmente pero el archivo la restauró`,
-                  referencia: row.reference,
+                  mensaje: `Pago manual de ${pago.tipo === "pago_total" ? "PAGO TOTAL" : "ABONO"} restaurado por archivo. Cliente: ${facturaEnArchivo.cliente_nombre || pago.cliente_codigo}`,
+                  referencia: pago.referencia,
+                  cliente_codigo: pago.cliente_codigo,
+                  metadata: {
+                    tipo_pago: pago.tipo,
+                    monto_manual: pago.monto_aplicado,
+                    saldo_manual: montoEsperado,
+                    saldo_archivo: montoArchivo,
+                    diferencia,
+                    fecha_pago: pago.created_at,
+                    notas_originales: pago.notas,
+                  },
                 });
               }
             }
@@ -392,11 +428,18 @@ export default function UploadPortfolio() {
 
           if (alertas.length > 0) {
             await supabase.from("alerts").insert(alertas);
-            res.errores.push(`${alertas.length} pago(s) manual(es) fueron sobreescritos por el archivo`);
+            const mensaje = `${alertas.length} pago(s) manual(es) fueron restaurados por el archivo`;
+            res.errores.push(mensaje);
+            console.warn(`⚠️ ${mensaje}`);
+            toast.warning("Pagos manuales restaurados", {
+              description: `${alertas.length} pago(s) fueron sobreescritos. Revisa las alertas para detalles.`,
+            });
+          } else {
+            console.log("✅ Todos los pagos manuales coinciden con el archivo");
           }
         }
       } catch (reconcileErr) {
-        console.warn("Reconciliation warning:", reconcileErr);
+        console.error("Error en reconciliación:", reconcileErr);
       }
 
       // 4. Programar actualización de vencimientos en background (post-carga)

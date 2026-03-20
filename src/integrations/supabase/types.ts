@@ -20,6 +20,7 @@ export type Database = {
           fecha_alerta: string
           id: string
           mensaje: string
+          metadata: Json | null
           referencia: string | null
           tipo: string
           user_id: string | null
@@ -32,6 +33,7 @@ export type Database = {
           fecha_alerta?: string
           id?: string
           mensaje: string
+          metadata?: Json | null
           referencia?: string | null
           tipo: string
           user_id?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           fecha_alerta?: string
           id?: string
           mensaje?: string
+          metadata?: Json | null
           referencia?: string | null
           tipo?: string
           user_id?: string | null
@@ -243,6 +246,7 @@ export type Database = {
           cliente_codigo: string
           created_at: string
           id: string
+          modified_at: string | null
           modified_by_upload: boolean | null
           monto_aplicado: number
           monto_original: number
@@ -256,6 +260,7 @@ export type Database = {
           cliente_codigo: string
           created_at?: string
           id?: string
+          modified_at?: string | null
           modified_by_upload?: boolean | null
           monto_aplicado: number
           monto_original: number
@@ -269,6 +274,7 @@ export type Database = {
           cliente_codigo?: string
           created_at?: string
           id?: string
+          modified_at?: string | null
           modified_by_upload?: boolean | null
           monto_aplicado?: number
           monto_original?: number

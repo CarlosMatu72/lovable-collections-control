@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,10 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Bell, AlertTriangle, DollarSign, Users, CheckCircle, Eye } from "lucide-react";
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Bell, AlertTriangle, DollarSign, Users, CheckCircle, Eye, ChevronDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 
@@ -27,6 +30,9 @@ const alertColors: Record<string, string> = {
   usuario_pendiente: "text-blue-400",
   carga_exitosa: "text-primary",
 };
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 
 export default function AlertsPage() {
   const queryClient = useQueryClient();
@@ -124,6 +130,7 @@ export default function AlertsPage() {
                   {filtered.map((a) => {
                     const Icon = alertIcons[a.tipo] || Bell;
                     const color = alertColors[a.tipo] || "text-muted-foreground";
+                    const meta = a.metadata as Record<string, any> | null;
                     return (
                       <TableRow key={a.id} className={!a.visto ? "bg-accent/30" : ""}>
                         <TableCell><Icon className={`h-4 w-4 ${color}`} /></TableCell>
@@ -132,7 +139,45 @@ export default function AlertsPage() {
                             {a.tipo.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm max-w-md truncate">{a.mensaje}</TableCell>
+                        <TableCell className="text-sm max-w-md">
+                          <div className="truncate">{a.mensaje}</div>
+                          {a.tipo === "pago_restaurado" && meta && (
+                            <Collapsible>
+                              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mt-1">
+                                <ChevronDown className="h-3 w-3" />
+                                Ver detalles
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="mt-2 p-3 bg-muted rounded-md text-xs space-y-1">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  <span className="font-medium">Tipo de pago:</span>
+                                  <span>{meta.tipo_pago === "pago_total" ? "Pago Total" : "Abono Parcial"}</span>
+
+                                  <span className="font-medium">Monto aplicado:</span>
+                                  <span className="font-mono">{fmt(meta.monto_manual ?? 0)}</span>
+
+                                  <span className="font-medium">Saldo después del pago:</span>
+                                  <span className="font-mono">{fmt(meta.saldo_manual ?? 0)}</span>
+
+                                  <span className="font-medium">Saldo en archivo:</span>
+                                  <span className="font-mono">{fmt(meta.saldo_archivo ?? 0)}</span>
+
+                                  <span className="font-medium">Diferencia:</span>
+                                  <span className="font-mono text-destructive">{fmt(meta.diferencia ?? 0)}</span>
+
+                                  <span className="font-medium">Fecha del pago:</span>
+                                  <span>{meta.fecha_pago ? new Date(meta.fecha_pago).toLocaleDateString("es-MX") : "—"}</span>
+
+                                  {meta.notas_originales && (
+                                    <>
+                                      <span className="font-medium">Notas originales:</span>
+                                      <span className="italic">{meta.notas_originales}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                           {new Date(a.fecha_alerta).toLocaleString("es-MX")}
                         </TableCell>
