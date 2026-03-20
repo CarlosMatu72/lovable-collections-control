@@ -378,7 +378,7 @@ export default function UploadPortfolio() {
             mensaje: string;
             referencia: string;
             cliente_codigo: string;
-            metadata: Record<string, unknown>;
+            metadata: Record<string, string | number | null>;
           }> = [];
 
           for (const pago of pagosM) {
