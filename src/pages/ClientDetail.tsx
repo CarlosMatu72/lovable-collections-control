@@ -130,14 +130,19 @@ export default function ClientDetail() {
 
   // Aggregated KPIs
   const kpis = useMemo(() => {
-    if (!activeInvoices) return { porCobrar: 0, aFavor: 0, neto: 0 };
-    let porCobrar = 0, aFavor = 0;
+    if (!activeInvoices) return { porCobrar: 0, aFavor: 0, neto: 0, vigente: 0, vencido: 0 };
+    let porCobrar = 0, aFavor = 0, vigente = 0, vencido = 0;
     activeInvoices.forEach((inv) => {
       const pc = inv.por_cobrar ?? 0;
-      if (pc < 0) aFavor += Math.abs(pc);
-      else porCobrar += pc;
+      if (pc < 0) {
+        aFavor += Math.abs(pc);
+      } else {
+        porCobrar += pc;
+        if (inv.status === "vencida") vencido += pc;
+        else vigente += pc;
+      }
     });
-    return { porCobrar, aFavor, neto: porCobrar - aFavor };
+    return { porCobrar, aFavor, neto: porCobrar - aFavor, vigente, vencido };
   }, [activeInvoices]);
 
   // Calculate due date for each invoice
