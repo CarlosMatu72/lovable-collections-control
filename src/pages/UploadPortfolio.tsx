@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -10,10 +9,11 @@ import {
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 
-// BUILD VERSION: 2026-03-19-REFERENCE-UNIQUE
-const BUILD_VERSION = "2026-03-19-REFERENCE-UNIQUE";
+// BUILD VERSION
+const BUILD_VERSION = "2026-03-23-SIMPLE-DELETE-INSERT";
 console.log("📦 Build version:", BUILD_VERSION);
 
 interface ParsedRow {
@@ -32,19 +32,18 @@ interface ParsedRow {
 }
 
 interface PreviewStats {
-  total: number;
-  nuevas: number;
-  existentes: number;
-  pagadas: number;
+  total_facturas: number;
+  total_monto: number;
+  clientes_unicos: number;
   clientesNuevos: string[];
 }
 
 interface ProcessResult {
-  nuevas: number;
-  actualizadas: number;
-  pagadas: number;
+  facturas_cargadas: number;
+  total_por_cobrar: number;
+  clientes_procesados: number;
   clientesNuevos: number;
-  errores: string[];
+  tiempo_procesamiento: number;
 }
 
 type Step = "idle" | "preview" | "processing" | "done" | "error";
@@ -65,6 +64,7 @@ export default function UploadPortfolio() {
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const parseNumber = (val: unknown): number => {
     if (val == null || val === "") return 0;
@@ -75,7 +75,6 @@ export default function UploadPortfolio() {
   const parseDate = (val: unknown): string | null => {
     if (!val) return null;
     if (typeof val === "number") {
-      // Excel serial date
       const d = XLSX.SSF.parse_date_code(val);
       if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
       return null;
@@ -97,9 +96,7 @@ export default function UploadPortfolio() {
     if (!facturas || !clientesInfo) return;
 
     const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
-    clientesInfo.forEach((c) => {
-      clientMap[c.codigo] = c;
-    });
+    clientesInfo.forEach((c) => { clientMap[c.codigo] = c; });
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -146,7 +143,6 @@ export default function UploadPortfolio() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
-      // Validate columns
       const headers = Object.keys(rows[0] || {});
       const missing = REQUIRED_COLUMNS.filter(c => !headers.some(h => h.trim() === c));
       if (missing.length > 0) {
@@ -158,14 +154,11 @@ export default function UploadPortfolio() {
       setProgress(30);
       setProgressMsg("Procesando filas...");
 
-      // Filter valid rows (skip subtotals)
       const valid: ParsedRow[] = rows
         .filter(r => r["Cliente"] && r["Cuenta"] && r["Referencia"])
         .map(r => {
           const clienteStr = String(r["Cliente"] || "");
-          const cuentaRaw = r["Cuenta"];
-          const cuentaNorm = String(Math.floor(parseFloat(String(cuentaRaw || "0"))));
-
+          const cuentaNorm = String(Math.floor(parseFloat(String(r["Cuenta"] || "0"))));
           return {
             cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
@@ -182,17 +175,14 @@ export default function UploadPortfolio() {
           };
         });
 
-      // DEDUPLICAR por reference (guardar última ocurrencia)
+      // Deduplicar por reference
       const uniqueMap = new Map<string, ParsedRow>();
       valid.forEach(row => uniqueMap.set(row.reference, row));
       const deduplicated = Array.from(uniqueMap.values());
       if (deduplicated.length < valid.length) {
         const dupes = valid.length - deduplicated.length;
-        console.warn(`⚠️ Eliminados ${dupes} duplicados del archivo`);
         toast.warning(`Se encontraron ${dupes} facturas duplicadas y se usó la última versión`);
       }
-
-      console.log("✅ Filas válidas:", deduplicated.length);
 
       if (deduplicated.length === 0) {
         setErrorMsg("No se encontraron filas válidas en el archivo");
@@ -200,48 +190,36 @@ export default function UploadPortfolio() {
         return;
       }
 
-      // Use deduplicated from here
-      const validFinal = deduplicated;
-
-      setParsedRows(validFinal);
+      setParsedRows(deduplicated);
       setProgress(50);
-      setProgressMsg("Comparando con base de datos...");
+      setProgressMsg("Analizando archivo...");
 
-      console.log('🔥 VERSIÓN: USANDO REFERENCE ÚNICA 🔥');
+      const totalMonto = deduplicated.reduce((sum, row) => sum + row.por_cobrar, 0);
+      const clientesUnicos = [...new Set(deduplicated.map(row => row.cliente_codigo))];
 
-      const refsArchivo = new Set(validFinal.map(r => r.reference));
-
-      const { data: facturasActuales } = await supabase
-        .from("invoices")
-        .select("reference")
-        .eq("active", true);
-
-      const refsActuales = new Set(
-        (facturasActuales || []).map(f => f.reference)
-      );
-
-      const nuevas = [...refsArchivo].filter(r => !refsActuales.has(r)).length;
-      const existentes = [...refsArchivo].filter(r => refsActuales.has(r)).length;
-      const pagadas = [...refsActuales].filter(r => !refsArchivo.has(r)).length;
-
-      console.log('📊 ANÁLISIS (reference):', { enBD: refsActuales.size, enArchivo: refsArchivo.size, nuevas, existentes, pagadas });
-
-      const codigosArchivo = [...new Set(validFinal.map((row) => row.cliente_codigo))];
+      // Detectar clientes nuevos
       const { data: clientesExistentes } = await supabase
         .from("clients")
         .select("codigo")
-        .in("codigo", codigosArchivo);
+        .in("codigo", clientesUnicos);
 
-      const codigosEnBD = new Set(clientesExistentes?.map((c) => c.codigo) || []);
-      const clientesNuevos = codigosArchivo.filter((c) => !codigosEnBD.has(c));
+      const codigosEnBD = new Set(clientesExistentes?.map(c => c.codigo) || []);
+      const clientesNuevos = clientesUnicos.filter(c => !codigosEnBD.has(c));
 
       if (clientesNuevos.length > 0) {
         toast.warning("Clientes nuevos detectados", {
-          description: `${clientesNuevos.length} clientes se agregarán automáticamente: ${clientesNuevos.slice(0, 5).join(", ")}${clientesNuevos.length > 5 ? "..." : ""}`,
+          description: `Se crearán ${clientesNuevos.length} clientes: ${clientesNuevos.slice(0, 3).join(", ")}${clientesNuevos.length > 3 ? "..." : ""}`,
         });
       }
 
-      setStats({ total: validFinal.length, nuevas, existentes, pagadas, clientesNuevos });
+      console.log('📊 RESUMEN:', { facturas: deduplicated.length, monto: totalMonto, clientes: clientesUnicos.length, nuevos: clientesNuevos.length });
+
+      setStats({
+        total_facturas: deduplicated.length,
+        total_monto: totalMonto,
+        clientes_unicos: clientesUnicos.length,
+        clientesNuevos,
+      });
       setStep("preview");
       setProgress(100);
     } catch (err) {
@@ -249,83 +227,83 @@ export default function UploadPortfolio() {
       setStep("error");
     }
 
-    // Reset file input
     if (fileRef.current) fileRef.current.value = "";
   }, []);
 
   const handleConfirm = useCallback(async () => {
     if (!stats) return;
+
+    const tiempoInicio = Date.now();
     setStep("processing");
     setProgress(0);
     setProgressDetail({ actual: 0, total: parsedRows.length, porcentaje: 0 });
 
-    const res: ProcessResult = { nuevas: 0, actualizadas: 0, pagadas: 0, clientesNuevos: 0, errores: [] };
+    const res: ProcessResult = {
+      facturas_cargadas: 0,
+      total_por_cobrar: 0,
+      clientes_procesados: 0,
+      clientesNuevos: 0,
+      tiempo_procesamiento: 0,
+    };
 
     try {
-      // 1. Create new clients
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuario no autenticado");
+
+      console.log('🚀 INICIANDO CARGA DE CARTERA');
+
+      // PASO 1: Crear clientes nuevos
       if (stats.clientesNuevos.length > 0) {
-        setProgressMsg("Creando clientes nuevos...");
+        setProgressMsg(`Creando ${stats.clientesNuevos.length} clientes nuevos...`);
         setProgress(5);
+
         const clientesData = stats.clientesNuevos.map(codigo => {
           const fila = parsedRows.find(r => r.cliente_codigo === codigo);
           return {
             codigo,
             nombre: fila?.cliente_nombre || codigo,
             dias_credito: 45,
+            tipo_dias: "naturales" as const,
             limite_credito: 0,
             estado: "activo" as const,
           };
         });
+
         const { error } = await supabase.from("clients").insert(clientesData);
-        if (error) throw new Error(error.message || JSON.stringify(error));
+        if (error) throw error;
         res.clientesNuevos = stats.clientesNuevos.length;
       }
 
-      // 2. Mark absent invoices as paid (using reference)
-      setProgressMsg("Marcando facturas pagadas...");
-      setProgress(15);
+      // PASO 2: BORRAR todas las facturas anteriores
+      setProgressMsg("Limpiando facturas anteriores...");
+      setProgress(10);
 
-      const refsArchivo = new Set(parsedRows.map(r => r.reference));
-
-      const { data: facturasActuales } = await supabase
+      const { error: deleteError } = await supabase
         .from("invoices")
-        .select("reference")
-        .eq("active", true);
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
 
-      const refsPagadas = (facturasActuales || [])
-        .map(f => f.reference)
-        .filter(r => !refsArchivo.has(r));
+      if (deleteError) throw deleteError;
+      console.log('✅ Facturas anteriores eliminadas');
 
-      if (refsPagadas.length > 0) {
-        for (let i = 0; i < refsPagadas.length; i += 500) {
-          const chunk = refsPagadas.slice(i, i + 500);
-          const { error } = await supabase
-            .from("invoices")
-            .update({ active: false, status: "pagada" as const, paid_date: new Date().toISOString().split("T")[0] })
-            .in("reference", chunk);
-          if (error) throw new Error(error.message || JSON.stringify(error));
-        }
-        res.pagadas = refsPagadas.length;
-      }
-
-      // 3. Upsert invoices using reference as unique key
-      const refsActualesSet = new Set(
-        (facturasActuales || []).map(f => f.reference)
-      );
+      // PASO 3: INSERTAR todas las facturas del archivo
+      setProgressMsg("Cargando facturas del archivo...");
+      setProgress(20);
 
       const BATCH_SIZE = 500;
 
       for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
         const batch = parsedRows.slice(i, i + BATCH_SIZE);
         const procesadas = i + batch.length;
+        const porcentaje = Math.round((procesadas / parsedRows.length) * 100);
 
-        setProgressMsg(`Procesando ${procesadas} de ${parsedRows.length} facturas...`);
-        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje: Math.round((procesadas / parsedRows.length) * 100) });
-        setProgress(20 + Math.round((procesadas / parsedRows.length) * 60));
+        setProgressMsg(`Cargando ${procesadas} de ${parsedRows.length} facturas...`);
+        setProgressDetail({ actual: procesadas, total: parsedRows.length, porcentaje });
+        setProgress(20 + Math.round((procesadas / parsedRows.length) * 70));
 
         const invoicesData = batch.map(row => ({
           cliente_codigo: row.cliente_codigo,
-          cuenta: row.cuenta,
+          cuenta: String(Math.floor(parseFloat(row.cuenta))),
           reference: row.reference,
           fecha_emision: row.fecha_emision,
           pedimento: row.pedimento,
@@ -339,178 +317,72 @@ export default function UploadPortfolio() {
           status: "vigente" as const,
         }));
 
-        try {
-          const { error } = await supabase
-            .from("invoices")
-            .upsert(invoicesData, { onConflict: "reference", ignoreDuplicates: false });
-
-          if (error) throw new Error(`Error en batch: ${error.message}`);
-
-          batch.forEach(r => {
-            if (refsActualesSet.has(r.reference)) {
-              res.actualizadas++;
-            } else {
-              res.nuevas++;
-              refsActualesSet.add(r.reference);
-            }
-          });
-        } catch (batchError: any) {
-          console.error('Error procesando batch:', batchError);
-          throw new Error(`Error en factura ${i + 1}: ${batchError.message || String(batchError)}`);
+        const { error } = await supabase.from("invoices").insert(invoicesData);
+        if (error) {
+          console.error('❌ Error en batch:', error);
+          throw new Error(`Error insertando facturas: ${error.message}`);
         }
+
+        res.facturas_cargadas += batch.length;
+        res.total_por_cobrar += batch.reduce((sum, row) => sum + row.por_cobrar, 0);
       }
 
-      // 3.5 Reconcile manual payments
-      setProgressMsg("Reconciliando pagos manuales...");
-      setProgress(82);
-      try {
-        const { data: pagosM } = await supabase
-          .from("payment_log")
-          .select("*")
-          .eq("modified_by_upload", false)
-          .order("created_at", { ascending: false });
+      res.clientes_procesados = stats.clientes_unicos;
 
-        if (pagosM && pagosM.length > 0) {
-          console.log(`📝 Encontrados ${pagosM.length} pagos manuales a reconciliar`);
-
-          const alertas: Array<{
-            tipo: string;
-            mensaje: string;
-            referencia: string;
-            cliente_codigo: string;
-            metadata: Record<string, string | number | null>;
-          }> = [];
-
-          for (const pago of pagosM) {
-            const facturaEnArchivo = parsedRows.find(
-              row => row.reference === pago.referencia && row.cliente_codigo === pago.cliente_codigo
-            );
-
-            if (facturaEnArchivo) {
-              const montoArchivo = facturaEnArchivo.por_cobrar;
-              const montoEsperado = pago.saldo_restante;
-              const diferencia = Math.abs(montoArchivo - montoEsperado);
-
-              if (diferencia > 1) {
-                console.warn(
-                  `⚠️ Diferencia en ${pago.referencia}: Manual=$${montoEsperado.toFixed(2)} vs Archivo=$${montoArchivo.toFixed(2)}`
-                );
-
-                await supabase
-                  .from("invoices")
-                  .update({ por_cobrar: montoArchivo })
-                  .eq("reference", pago.referencia)
-                  .eq("cliente_codigo", pago.cliente_codigo);
-
-                await supabase
-                  .from("payment_log")
-                  .update({ modified_by_upload: true, modified_at: new Date().toISOString() })
-                  .eq("id", pago.id);
-
-                alertas.push({
-                  tipo: "pago_restaurado",
-                  mensaje: `Pago manual de ${pago.tipo === "pago_total" ? "PAGO TOTAL" : "ABONO"} restaurado por archivo. Cliente: ${facturaEnArchivo.cliente_nombre || pago.cliente_codigo}`,
-                  referencia: pago.referencia,
-                  cliente_codigo: pago.cliente_codigo,
-                  metadata: {
-                    tipo_pago: pago.tipo,
-                    monto_manual: pago.monto_aplicado,
-                    saldo_manual: montoEsperado,
-                    saldo_archivo: montoArchivo,
-                    diferencia,
-                    fecha_pago: pago.created_at,
-                    notas_originales: pago.notas,
-                  },
-                });
-              }
-            }
-          }
-
-          if (alertas.length > 0) {
-            await supabase.from("alerts").insert(alertas);
-            const mensaje = `${alertas.length} pago(s) manual(es) fueron restaurados por el archivo`;
-            res.errores.push(mensaje);
-            console.warn(`⚠️ ${mensaje}`);
-            toast.warning("Pagos manuales restaurados", {
-              description: `${alertas.length} pago(s) fueron sobreescritos. Revisa las alertas para detalles.`,
-            });
-          } else {
-            console.log("✅ Todos los pagos manuales coinciden con el archivo");
-          }
-        }
-      } catch (reconcileErr) {
-        console.error("Error en reconciliación:", reconcileErr);
-      }
-
-      // 4. Programar actualización de vencimientos en background (post-carga)
-      setProgressMsg("Finalizando carga...");
-      setProgress(85);
-
-      // 5. Log upload
+      // PASO 4: Registrar la carga
       setProgressMsg("Registrando carga...");
       setProgress(95);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("upload_log").insert({
-          user_id: user.id,
-          archivo_nombre: fileName,
-          facturas_nuevas: res.nuevas,
-          facturas_actualizadas: res.actualizadas,
-          facturas_pagadas: res.pagadas,
-          clientes_nuevos: res.clientesNuevos,
-          status: res.errores.length > 0 ? "warning" : "success",
-          error_message: res.errores.length > 0 ? res.errores.join("; ") : null,
-        });
+      const tiempoTotal = Math.round((Date.now() - tiempoInicio) / 1000);
+      res.tiempo_procesamiento = tiempoTotal;
 
-        // 6. Generate alerts
-        // 6a. Carga exitosa alert
-        await supabase.from("alerts").insert({
-          tipo: "carga_exitosa",
-          mensaje: `Carga completada: ${res.nuevas} nuevas, ${res.actualizadas} actualizadas, ${res.pagadas} pagadas`,
-          user_id: user.id,
-        });
+      await supabase.from("upload_log").insert({
+        user_id: user.id,
+        archivo_nombre: fileName,
+        facturas_nuevas: res.facturas_cargadas,
+        facturas_actualizadas: 0,
+        facturas_pagadas: 0,
+        clientes_nuevos: res.clientesNuevos,
+        status: "success",
+        error_message: null,
+      });
 
-        // 6b. Detect credit limit exceeded
-        const { data: clientesConLimite } = await supabase
-          .from("clients")
-          .select("codigo, nombre, limite_credito")
-          .gt("limite_credito", 0);
+      await supabase.from("alerts").insert({
+        tipo: "carga_exitosa",
+        mensaje: `Cartera actualizada: ${res.facturas_cargadas} facturas cargadas (${fmt(res.total_por_cobrar)})`,
+        referencia: fileName,
+      });
 
-        if (clientesConLimite) {
-          for (const cliente of clientesConLimite) {
-            const { data: facs } = await supabase
-              .from("invoices")
-              .select("por_cobrar")
-              .eq("cliente_codigo", cliente.codigo)
-              .eq("active", true);
-            const total = facs?.reduce((sum, f) => sum + (f.por_cobrar ?? 0), 0) ?? 0;
-            if (total > cliente.limite_credito) {
-              await supabase.from("alerts").insert({
-                tipo: "limite_excedido",
-                mensaje: `${cliente.nombre} excedió su límite: $${total.toFixed(2)} de $${cliente.limite_credito.toFixed(2)}`,
-                cliente_codigo: cliente.codigo,
-              });
-            }
-          }
-        }
-      }
+      console.log('✅ CARGA COMPLETADA en', tiempoTotal, 'segundos');
 
-      setResult(res);
       setProgress(100);
-      setProgressDetail({ actual: parsedRows.length, total: parsedRows.length, porcentaje: 100 });
+      setResult(res);
       setStep("done");
 
+      toast.success("Cartera actualizada", {
+        description: `${res.facturas_cargadas} facturas cargadas en ${tiempoTotal}s`,
+      });
+
+      // Actualizar vencimientos en background
       setTimeout(() => {
         actualizarStatusVencimientos()
-          .then(() => console.log("✓ Status de vencimientos actualizado"))
-          .catch((statusErr) => console.warn("Status update warning:", statusErr));
+          .then(() => console.log("✓ Vencimientos actualizados"))
+          .catch((err) => console.warn("Vencimientos warning:", err));
       }, 1000);
-    } catch (err) {
-      setErrorMsg(`Error en la carga: ${err instanceof Error ? err.message : String(err)}`);
+
+      // Refrescar dashboard
+      queryClient.invalidateQueries({ queryKey: ["kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-table"] });
+
+    } catch (err: any) {
+      console.error("❌ ERROR EN CARGA:", err);
+      setErrorMsg(err.message || String(err));
       setStep("error");
+      toast.error("Error al cargar cartera", {
+        description: err.message || "Error desconocido",
+      });
     }
-  }, [parsedRows, stats, fileName, actualizarStatusVencimientos]);
+  }, [stats, parsedRows, fileName, queryClient, actualizarStatusVencimientos]);
 
   const reset = () => {
     setStep("idle");
@@ -537,7 +409,7 @@ export default function UploadPortfolio() {
               Carga de Cartera Semanal
             </CardTitle>
             <CardDescription>
-              Sube el archivo Excel con la cartera actualizada. El sistema sincronizará automáticamente las facturas.
+              Sube el archivo Excel con la cartera actualizada. El sistema reemplazará todas las facturas con el contenido del archivo.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -587,22 +459,24 @@ export default function UploadPortfolio() {
               <CardDescription>Archivo: {fileName}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-lg bg-secondary p-4 text-center">
-                  <p className="text-2xl font-bold font-mono">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Facturas totales</p>
+                  <p className="text-2xl font-bold font-mono text-primary">
+                    {stats.total_facturas}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Facturas a cargar</p>
                 </div>
                 <div className="rounded-lg bg-secondary p-4 text-center">
-                  <p className="text-2xl font-bold font-mono text-primary">{stats.nuevas}</p>
-                  <p className="text-xs text-muted-foreground">Nuevas</p>
+                  <p className="text-xl font-bold font-mono">
+                    {fmt(stats.total_monto)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total por cobrar</p>
                 </div>
                 <div className="rounded-lg bg-secondary p-4 text-center">
-                  <p className="text-2xl font-bold font-mono" style={{ color: "hsl(217 91% 60%)" }}>{stats.existentes}</p>
-                  <p className="text-xs text-muted-foreground">Actualizar</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-4 text-center">
-                  <p className="text-2xl font-bold font-mono text-destructive">{stats.pagadas}</p>
-                  <p className="text-xs text-muted-foreground">Marcar pagadas</p>
+                  <p className="text-2xl font-bold font-mono">
+                    {stats.clientes_unicos}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Clientes únicos</p>
                 </div>
               </div>
               {stats.clientesNuevos.length > 0 && (
@@ -671,37 +545,48 @@ export default function UploadPortfolio() {
         <Card className="border-primary/30">
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <CheckCircle2 className="h-12 w-12 text-primary" />
-            <h3 className="text-xl font-semibold">Carga Completada</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-lg">
+            <h3 className="text-xl font-semibold">Cartera Actualizada</h3>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-2xl">
               <div className="text-center">
-                <p className="text-2xl font-bold font-mono text-primary">{result.nuevas}</p>
-                <p className="text-xs text-muted-foreground">Nuevas</p>
+                <p className="text-2xl font-bold font-mono text-primary">
+                  {result.facturas_cargadas}
+                </p>
+                <p className="text-xs text-muted-foreground">Facturas cargadas</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold font-mono" style={{ color: "hsl(217 91% 60%)" }}>{result.actualizadas}</p>
-                <p className="text-xs text-muted-foreground">Actualizadas</p>
+                <p className="text-lg font-bold font-mono">
+                  {fmt(result.total_por_cobrar)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total por cobrar</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold font-mono text-destructive">{result.pagadas}</p>
-                <p className="text-xs text-muted-foreground">Pagadas</p>
+                <p className="text-2xl font-bold font-mono">
+                  {result.clientes_procesados}
+                </p>
+                <p className="text-xs text-muted-foreground">Clientes</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold font-mono">{result.clientesNuevos}</p>
-                <p className="text-xs text-muted-foreground">Clientes nuevos</p>
+                <p className="text-2xl font-bold font-mono">
+                  {result.tiempo_procesamiento}s
+                </p>
+                <p className="text-xs text-muted-foreground">Tiempo</p>
               </div>
             </div>
-            {result.errores.length > 0 && (
-              <Alert variant="destructive" className="max-w-lg">
+
+            {result.clientesNuevos > 0 && (
+              <Alert className="max-w-lg">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Advertencias</AlertTitle>
+                <AlertTitle>Clientes nuevos</AlertTitle>
                 <AlertDescription>
-                  <ul className="list-disc pl-4 text-sm">
-                    {result.errores.map((e, i) => <li key={i}>{e}</li>)}
-                  </ul>
+                  Se crearon {result.clientesNuevos} cliente(s) nuevo(s)
                 </AlertDescription>
               </Alert>
             )}
-            <Button onClick={reset} variant="outline">Nueva Carga</Button>
+
+            <Button onClick={reset} variant="outline">
+              Nueva Carga
+            </Button>
           </CardContent>
         </Card>
       )}
