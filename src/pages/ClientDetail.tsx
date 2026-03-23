@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft, Pencil, CheckCircle, DollarSign, Download, MessageSquare, Search,
+  AlertTriangle, TrendingDown, TrendingUp,
 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -129,14 +130,19 @@ export default function ClientDetail() {
 
   // Aggregated KPIs
   const kpis = useMemo(() => {
-    if (!activeInvoices) return { porCobrar: 0, aFavor: 0, neto: 0 };
-    let porCobrar = 0, aFavor = 0;
+    if (!activeInvoices) return { porCobrar: 0, aFavor: 0, neto: 0, vigente: 0, vencido: 0 };
+    let porCobrar = 0, aFavor = 0, vigente = 0, vencido = 0;
     activeInvoices.forEach((inv) => {
       const pc = inv.por_cobrar ?? 0;
-      if (pc < 0) aFavor += Math.abs(pc);
-      else porCobrar += pc;
+      if (pc < 0) {
+        aFavor += Math.abs(pc);
+      } else {
+        porCobrar += pc;
+        if (inv.status === "vencida") vencido += pc;
+        else vigente += pc;
+      }
     });
-    return { porCobrar, aFavor, neto: porCobrar - aFavor };
+    return { porCobrar, aFavor, neto: porCobrar - aFavor, vigente, vencido };
   }, [activeInvoices]);
 
   // Calculate due date for each invoice
@@ -347,7 +353,8 @@ export default function ClientDetail() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
@@ -395,23 +402,53 @@ export default function ClientDetail() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Por Cobrar</p>
-            <p className="text-2xl font-bold font-mono">{fmt(kpis.porCobrar)}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-500" />
+              Monto Vigente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-green-600">{fmt(kpis.vigente)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Facturas no vencidas</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Saldos a Favor</p>
-            <p className="text-2xl font-bold font-mono" style={{ color: "hsl(var(--info))" }}>{fmt(kpis.aFavor)}</p>
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              Monto Vencido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-red-600">{fmt(kpis.vencido)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Facturas vencidas</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Saldo Neto</p>
-            <p className="text-2xl font-bold font-mono">{fmt(kpis.neto)}</p>
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-blue-500" />
+              Saldo a Favor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono text-blue-600">{fmt(kpis.aFavor)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Crédito del cliente</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Saldo Neto
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">{fmt(kpis.neto)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total a cobrar</p>
           </CardContent>
         </Card>
       </div>
