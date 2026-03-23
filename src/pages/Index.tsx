@@ -213,11 +213,15 @@ export default function Dashboard() {
   [clientSummaries]);
 
   const filtered = useMemo(() => {
-    if (!search) return clientSummaries;
-    const q = search.toLowerCase();
-    return clientSummaries.filter(
-      (c) => c.cliente_codigo.toLowerCase().includes(q) || c.nombre.toLowerCase().includes(q)
-    );
+    let list = clientSummaries;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (c) => c.cliente_codigo.toLowerCase().includes(q) || c.nombre.toLowerCase().includes(q)
+      );
+    }
+    // Ordenar de mayor deudor a menor
+    return [...list].sort((a, b) => b.neto - a.neto);
   }, [clientSummaries, search]);
 
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
