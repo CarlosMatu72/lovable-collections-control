@@ -334,7 +334,6 @@ export default function UploadPortfolio() {
       setProgress(95);
 
       const tiempoTotal = Math.round((Date.now() - tiempoInicio) / 1000);
-      res.tiempo_procesamiento = tiempoTotal;
 
       await supabase.from("upload_log").insert({
         user_id: user.id,
@@ -353,22 +352,31 @@ export default function UploadPortfolio() {
         referencia: fileName,
       });
 
-      console.log('✅ CARGA COMPLETADA en', tiempoTotal, 'segundos');
+      // ============================================================
+      // PASO 5: Actualizar status de vencimientos
+      // ============================================================
+      setProgressMsg("Calculando vencimientos...");
+      setProgress(96);
+
+      try {
+        await actualizarStatusVencimientos();
+        console.log('✅ Vencimientos actualizados correctamente');
+      } catch (vencErr) {
+        console.warn("⚠️ Error actualizando vencimientos:", vencErr);
+      }
+
+      const tiempoFinal = Math.round((Date.now() - tiempoInicio) / 1000);
+      res.tiempo_procesamiento = tiempoFinal;
+
+      console.log('✅ CARGA COMPLETADA en', tiempoFinal, 'segundos');
 
       setProgress(100);
       setResult(res);
       setStep("done");
 
       toast.success("Cartera actualizada", {
-        description: `${res.facturas_cargadas} facturas cargadas en ${tiempoTotal}s`,
+        description: `${res.facturas_cargadas} facturas cargadas en ${tiempoFinal}s`,
       });
-
-      // Actualizar vencimientos en background
-      setTimeout(() => {
-        actualizarStatusVencimientos()
-          .then(() => console.log("✓ Vencimientos actualizados"))
-          .catch((err) => console.warn("Vencimientos warning:", err));
-      }, 1000);
 
       // Refrescar dashboard
       queryClient.invalidateQueries({ queryKey: ["kpis"] });
