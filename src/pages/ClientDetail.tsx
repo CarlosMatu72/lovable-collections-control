@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft, Pencil, CheckCircle, DollarSign, Download, MessageSquare, Search,
+  AlertTriangle, TrendingDown, TrendingUp,
 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
