@@ -34,13 +34,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-          </div>
+          <img src={ligsLogo} alt="LIGS Group" className="h-9 w-9 shrink-0 object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-primary-foreground">Control Cartera</span>
-              <span className="text-xs text-sidebar-foreground">Gestión de cobranza</span>
+              <span className="text-sm font-semibold text-sidebar-primary-foreground">LIGS Group</span>
+              <span className="text-xs text-sidebar-foreground">Control de cartera</span>
             </div>
           )}
         </div>
