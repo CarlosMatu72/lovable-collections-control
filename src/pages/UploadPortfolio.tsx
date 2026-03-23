@@ -334,7 +334,6 @@ export default function UploadPortfolio() {
       setProgress(95);
 
       const tiempoTotal = Math.round((Date.now() - tiempoInicio) / 1000);
-      res.tiempo_procesamiento = tiempoTotal;
 
       await supabase.from("upload_log").insert({
         user_id: user.id,
