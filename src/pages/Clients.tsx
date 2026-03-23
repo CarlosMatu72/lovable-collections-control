@@ -112,6 +112,8 @@ export default function Clients() {
     if (filter === "vencidos") list = list.filter((c) => c.vencido > 0);
     else if (filter === "vigentes") list = list.filter((c) => c.vigente > 0 && c.vencido === 0);
     else if (filter === "a_favor") list = list.filter((c) => c.a_favor > 0);
+    // Ordenar de mayor deudor a menor
+    list = [...list].sort((a, b) => b.neto - a.neto);
     return list;
   }, [clientAggs, search, filter]);
 
