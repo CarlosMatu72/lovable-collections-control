@@ -7,7 +7,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
-import { ShieldCheck } from "lucide-react";
+import ligsLogo from "@/assets/ligs-logo.png";
 
 const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
