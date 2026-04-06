@@ -541,7 +541,7 @@ export default function ClientDetail() {
                               size="icon"
                               className="h-7 w-7"
                               title="Aplicar Abono"
-                              onClick={() => setAbonoModal({ ref: inv.reference, saldo: inv.por_cobrar ?? 0 })}
+                              onClick={() => setAbonoModal({ ref: inv.reference, saldo: inv.por_cobrar ?? 0, prevStatus: inv.status as "vigente" | "vencida" | "abono_parcial" })}
                             >
                               <DollarSign className="h-3.5 w-3.5" />
                             </Button>
