@@ -301,7 +301,6 @@ export default function UploadPortfolio() {
         .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (deleteError) throw deleteError;
-      console.log('✅ Facturas anteriores eliminadas');
 
       // PASO 3: INSERTAR todas las facturas del archivo
       setProgressMsg("Cargando facturas del archivo...");
