@@ -189,8 +189,11 @@ export default function Dashboard() {
         s.vencido += pc;
         s.fact_vencidas++;
         if (inv.fecha_emision) {
-          const diff = Math.floor((today.getTime() - new Date(inv.fecha_emision).getTime()) / 86400000);
-          s.dias_prom += diff;
+          const diasCredito = clientMap[code]?.dias_credito ?? 0;
+          const fechaVenc = new Date(inv.fecha_emision);
+          fechaVenc.setDate(fechaVenc.getDate() + diasCredito);
+          const diff = Math.floor((today.getTime() - fechaVenc.getTime()) / 86400000);
+          if (diff > 0) s.dias_prom += diff;
         }
       } else if (inv.status === "vigente") {
         s.vigente += pc;

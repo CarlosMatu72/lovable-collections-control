@@ -137,6 +137,10 @@ export default function UploadClients() {
     setImporting(false);
     setDone(true);
     setResultMsg(`✓ Importados ${imported} clientes exitosamente${errorCount > 0 ? `. ${errorCount} con errores.` : ""}`);
+    if (imported > 0) {
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+    }
     toast.success("Importación completada", { description: `${imported} clientes procesados` });
   };
 

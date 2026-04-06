@@ -55,7 +55,7 @@ export default function AdminUsers() {
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["pending-users-count"] });
-      queryClient.invalidateQueries({ queryKey: ["alerts-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-alerts-count"] });
       setConfirmAction(null);
       toast({ title: status === "approved" ? "✓ Usuario aprobado" : "Usuario rechazado" });
     },

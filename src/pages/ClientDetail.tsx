@@ -259,6 +259,8 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
       setAbonoModal(null);
       setAbonoMonto("");
       setAbonoNotes("");
