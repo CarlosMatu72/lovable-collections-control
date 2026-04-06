@@ -335,7 +335,6 @@ export default function UploadPortfolio() {
 
         const { error } = await supabase.from("invoices").insert(invoicesData);
         if (error) {
-          console.error('❌ Error en batch:', error);
           throw new Error(`Error insertando facturas: ${error.message}`);
         }
 
