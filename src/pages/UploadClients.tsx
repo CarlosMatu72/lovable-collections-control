@@ -22,6 +22,7 @@ interface ClientRow {
 }
 
 export default function UploadClients() {
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
