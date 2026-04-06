@@ -34,13 +34,20 @@ export default function SettingsPage() {
 
   const updatePassword = useMutation({
     mutationFn: async () => {
+      if (!currentPassword) throw new Error("Ingresa tu contraseña actual");
       if (newPassword.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres");
       if (newPassword !== confirmPassword) throw new Error("Las contraseñas no coinciden");
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile!.email,
+        password: currentPassword,
+      });
+      if (signInError) throw new Error("La contraseña actual es incorrecta");
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "✓ Contraseña actualizada" });
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     },
