@@ -145,7 +145,7 @@ export default function Dashboard() {
   });
 
   const { data: alertsCount } = useQuery({
-    queryKey: ["admin-alerts-count"],
+    queryKey: ["alerts-count"],
     queryFn: async () => {
       const { count } = await supabase.from("alerts").select("*", { count: "exact", head: true }).eq("visto", false);
       return count ?? 0;

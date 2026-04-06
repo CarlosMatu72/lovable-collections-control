@@ -116,6 +116,9 @@ export default function AuditPage() {
               )}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground text-center py-3 border-t border-border">
+            Mostrando los últimos 500 registros.
+          </p>
         </CardContent>
       </Card>
     </div>

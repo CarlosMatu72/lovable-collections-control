@@ -40,7 +40,6 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       toast({ title: "✓ Contraseña actualizada" });
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     },

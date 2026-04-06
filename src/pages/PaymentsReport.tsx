@@ -106,6 +106,9 @@ export default function PaymentsReport() {
               )}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground text-center py-3 border-t border-border">
+            Mostrando los últimos 500 registros. Usa Exportar para ver el historial completo.
+          </p>
         </CardContent>
       </Card>
     </div>

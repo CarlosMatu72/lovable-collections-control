@@ -134,18 +134,10 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg bg-secondary p-3 text-center">
                   <p className="text-xl font-bold font-mono text-primary">{detailLog.facturas_nuevas ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Nuevas</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-3 text-center">
-                  <p className="text-xl font-bold font-mono" style={{ color: "hsl(var(--info))" }}>{detailLog.facturas_actualizadas ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Actualizadas</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-3 text-center">
-                  <p className="text-xl font-bold font-mono text-destructive">{detailLog.facturas_pagadas ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Pagadas</p>
                 </div>
                 <div className="rounded-lg bg-secondary p-3 text-center">
                   <p className="text-xl font-bold font-mono">{detailLog.clientes_nuevos ?? 0}</p>
