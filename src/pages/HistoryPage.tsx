@@ -75,8 +75,6 @@ export default function HistoryPage() {
                 <TableHead>Usuario</TableHead>
                 <TableHead>Archivo</TableHead>
                 <TableHead className="text-right">Nuevas</TableHead>
-                <TableHead className="text-right">Actual.</TableHead>
-                <TableHead className="text-right">Pagadas</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
