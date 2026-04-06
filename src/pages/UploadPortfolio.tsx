@@ -180,8 +180,9 @@ export default function UploadPortfolio() {
           const clienteStr = String(r["Cliente"] || "");
           const cuentaNorm = String(Math.floor(parseFloat(String(r["Cuenta"] || "0"))));
           return {
-            cliente_codigo: clienteStr.substring(0, 6).trim().toUpperCase(),
-            cliente_nombre: clienteStr.substring(7).trim(),
+            const matchCodigo = clienteStr.match(/^([A-Z0-9]+)\s+(.*)/i);
+            const cliente_codigo = matchCodigo ? matchCodigo[1].substring(0, 20).toUpperCase() : clienteStr.substring(0, 20).trim().toUpperCase();
+            const cliente_nombre = matchCodigo ? matchCodigo[2].trim() : "";
             cuenta: cuentaNorm,
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),
