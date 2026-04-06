@@ -12,10 +12,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 
-// BUILD VERSION
-const BUILD_VERSION = "2026-03-23-SIMPLE-DELETE-INSERT";
-console.log("📦 Build version:", BUILD_VERSION);
-
 interface ParsedRow {
   cliente_codigo: string;
   cliente_nombre: string;
