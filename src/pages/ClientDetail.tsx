@@ -46,7 +46,7 @@ export default function ClientDetail() {
   // Modal states
   const [payModal, setPayModal] = useState<{ ref: string; monto: number } | null>(null);
   const [payNotes, setPayNotes] = useState("");
-  const [abonoModal, setAbonoModal] = useState<{ ref: string; saldo: number } | null>(null);
+  const [abonoModal, setAbonoModal] = useState<{ ref: string; saldo: number; prevStatus: "vigente" | "vencida" | "abono_parcial" } | null>(null);
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoNotes, setAbonoNotes] = useState("");
   const [commentModal, setCommentModal] = useState(false);
