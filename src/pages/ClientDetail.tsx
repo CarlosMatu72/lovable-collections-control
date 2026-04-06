@@ -219,6 +219,11 @@ export default function ClientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invoices-active", codigo] });
       queryClient.invalidateQueries({ queryKey: ["client-invoices-paid", codigo] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
       setPayModal(null);
       setPayNotes("");
       toast({ title: "✓ Pago registrado exitosamente" });
