@@ -45,7 +45,6 @@ export default function HistoryPage() {
       Archivo: log.archivo_nombre,
       "Facturas Nuevas": log.facturas_nuevas,
       "Clientes Nuevos": log.clientes_nuevos,
-      "Clientes Nuevos": log.clientes_nuevos,
       Estado: log.status,
       Errores: log.error_message || "",
     }];
