@@ -231,8 +231,6 @@ export default function UploadPortfolio() {
         });
       }
 
-      console.log('📊 RESUMEN:', { facturas: deduplicated.length, monto: totalMonto, clientes: clientesUnicos.length, nuevos: clientesNuevos.length });
-
       setStats({
         total_facturas: deduplicated.length,
         total_monto: totalMonto,
