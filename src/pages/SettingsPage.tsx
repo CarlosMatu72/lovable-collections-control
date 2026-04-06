@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const { profile, user } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
   
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
