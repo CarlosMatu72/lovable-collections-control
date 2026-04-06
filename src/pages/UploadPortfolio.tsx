@@ -160,7 +160,7 @@ export default function UploadPortfolio() {
           const clienteStr = String(r["Cliente"] || "");
           const cuentaNorm = String(Math.floor(parseFloat(String(r["Cuenta"] || "0"))));
           return {
-            cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
+            cliente_codigo: clienteStr.substring(0, 6).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
             cuenta: cuentaNorm,
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
