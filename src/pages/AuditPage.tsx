@@ -97,7 +97,7 @@ export default function AuditPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs?.map((l) => (
+              {filtered.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="text-sm whitespace-nowrap">{new Date(l.created_at).toLocaleString("es-MX")}</TableCell>
                   <TableCell className="text-sm">{l.user_id ? profileMap[l.user_id] || "—" : "Sistema"}</TableCell>
@@ -109,7 +109,7 @@ export default function AuditPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {(!logs || logs.length === 0) && (
+              {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin registros de auditoría</TableCell>
                 </TableRow>
