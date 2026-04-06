@@ -78,28 +78,6 @@ export default function Dashboard() {
         total_facturas: Number(row.total_facturas ?? 0),
       };
 
-      const pageSize = 1000;
-      let from = 0;
-      const verificacion: Array<{ por_cobrar: number | null }> = [];
-
-      while (true) {
-        const { data: chunk, error: chunkError } = await supabase
-          .from("invoices")
-          .select("por_cobrar")
-          .eq("active", true)
-          .range(from, from + pageSize - 1);
-
-        if (chunkError) throw chunkError;
-        if (!chunk?.length) break;
-
-        verificacion.push(...chunk);
-        if (chunk.length < pageSize) break;
-        from += pageSize;
-      }
-
-      const sumaManual = verificacion.reduce((sum, inv) => sum + Number(inv.por_cobrar ?? 0), 0);
-      const diferencia = Math.abs(sumaManual - parsedKpis.neto);
-
       return parsedKpis;
     },
   });
