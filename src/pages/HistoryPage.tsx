@@ -103,7 +103,7 @@ export default function HistoryPage() {
               ))}
               {(!logs || logs.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell>
                 </TableRow>
               )}
             </TableBody>
