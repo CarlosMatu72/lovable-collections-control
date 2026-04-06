@@ -150,12 +150,26 @@ export default function ClientDetail() {
     if (!activeInvoices || !client) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const calcVencimiento = (fechaEmision: string, diasCredito: number, tipoDias: string): Date => {
+      const result = new Date(fechaEmision);
+      if (tipoDias === "naturales") {
+        result.setDate(result.getDate() + diasCredito);
+        return result;
+      }
+      let counted = 0;
+      const cursor = new Date(fechaEmision);
+      while (counted < diasCredito) {
+        cursor.setDate(cursor.getDate() + 1);
+        const dow = cursor.getDay();
+        if (dow !== 0 && dow !== 6) counted++;
+      }
+      return cursor;
+    };
     return activeInvoices.map((inv) => {
       let vencimiento: Date | null = null;
       let diasVencidos = 0;
       if (inv.fecha_emision) {
-        vencimiento = new Date(inv.fecha_emision);
-        vencimiento.setDate(vencimiento.getDate() + client.dias_credito);
+        vencimiento = calcVencimiento(inv.fecha_emision, client.dias_credito, client.tipo_dias);
         diasVencidos = Math.floor((today.getTime() - vencimiento.getTime()) / 86400000);
       }
       return { ...inv, vencimiento, diasVencidos };
@@ -205,6 +219,11 @@ export default function ClientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invoices-active", codigo] });
       queryClient.invalidateQueries({ queryKey: ["client-invoices-paid", codigo] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
       setPayModal(null);
       setPayNotes("");
       toast({ title: "✓ Pago registrado exitosamente" });
@@ -240,6 +259,8 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
       setAbonoModal(null);
       setAbonoMonto("");
       setAbonoNotes("");

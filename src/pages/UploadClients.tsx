@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +22,7 @@ interface ClientRow {
 }
 
 export default function UploadClients() {
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -135,6 +137,10 @@ export default function UploadClients() {
     setImporting(false);
     setDone(true);
     setResultMsg(`✓ Importados ${imported} clientes exitosamente${errorCount > 0 ? `. ${errorCount} con errores.` : ""}`);
+    if (imported > 0) {
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+    }
     toast.success("Importación completada", { description: `${imported} clientes procesados` });
   };
 

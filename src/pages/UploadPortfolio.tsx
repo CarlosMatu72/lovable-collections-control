@@ -98,6 +98,22 @@ export default function UploadPortfolio() {
     const clientMap: Record<string, { dias_credito: number; tipo_dias: string }> = {};
     clientesInfo.forEach((c) => { clientMap[c.codigo] = c; });
 
+    const calcVencimiento = (fechaEmision: string, diasCredito: number, tipoDias: string): Date => {
+      if (tipoDias === "naturales") {
+        const d = new Date(fechaEmision);
+        d.setDate(d.getDate() + diasCredito);
+        return d;
+      }
+      let counted = 0;
+      const cursor = new Date(fechaEmision);
+      while (counted < diasCredito) {
+        cursor.setDate(cursor.getDate() + 1);
+        const dow = cursor.getDay();
+        if (dow !== 0 && dow !== 6) counted++;
+      }
+      return cursor;
+    };
+
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -108,8 +124,7 @@ export default function UploadPortfolio() {
       const client = clientMap[f.cliente_codigo];
       if (!client) continue;
 
-      const fechaVenc = new Date(f.fecha_emision);
-      fechaVenc.setDate(fechaVenc.getDate() + client.dias_credito);
+      const fechaVenc = calcVencimiento(f.fecha_emision, client.dias_credito, client.tipo_dias);
       const nuevoStatus: "vigente" | "vencida" = fechaVenc < hoy ? "vencida" : "vigente";
 
       if (f.status !== nuevoStatus) {
@@ -117,8 +132,13 @@ export default function UploadPortfolio() {
       }
     }
 
-    for (const u of updates) {
-      await supabase.from("invoices").update({ status: u.status }).eq("id", u.id);
+    if (updates.length === 0) return;
+
+    for (let i = 0; i < updates.length; i += 50) {
+      const batch = updates.slice(i, i + 50);
+      for (const u of batch) {
+        await supabase.from("invoices").update({ status: u.status }).eq("id", u.id);
+      }
     }
   }, []);
 
@@ -159,9 +179,12 @@ export default function UploadPortfolio() {
         .map(r => {
           const clienteStr = String(r["Cliente"] || "");
           const cuentaNorm = String(Math.floor(parseFloat(String(r["Cuenta"] || "0"))));
+          const matchCodigo = clienteStr.match(/^([A-Z0-9]+)\s+(.*)/i);
+          const cliente_codigo = matchCodigo ? matchCodigo[1].substring(0, 20).toUpperCase() : clienteStr.substring(0, 20).trim().toUpperCase();
+          const cliente_nombre = matchCodigo ? matchCodigo[2].trim() : "";
           return {
-            cliente_codigo: clienteStr.substring(0, 6).trim().toUpperCase(),
-            cliente_nombre: clienteStr.substring(7).trim(),
+            cliente_codigo,
+            cliente_nombre,
             cuenta: cuentaNorm,
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
             fecha_emision: parseDate(r["Fecha"]),

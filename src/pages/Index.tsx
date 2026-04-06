@@ -57,7 +57,7 @@ export default function Dashboard() {
   const { data: clients } = useQuery({
     queryKey: ["clients-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("codigo, nombre");
+      const { data } = await supabase.from("clients").select("codigo, nombre, dias_credito");
       return data ?? [];
     },
   });
@@ -160,8 +160,8 @@ export default function Dashboard() {
   }, [uploadProfiles]);
 
   const clientMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    clients?.forEach((c) => (map[c.codigo] = c.nombre));
+    const map: Record<string, { nombre: string; dias_credito: number }> = {};
+    clients?.forEach((c) => (map[c.codigo] = { nombre: c.nombre, dias_credito: c.dias_credito ?? 0 }));
     return map;
   }, [clients]);
 
@@ -176,7 +176,7 @@ export default function Dashboard() {
       if (!map[code]) {
         map[code] = {
           cliente_codigo: code,
-          nombre: clientMap[code] || code,
+          nombre: clientMap[code]?.nombre || code,
           vigente: 0, vencido: 0, a_favor: 0, neto: 0,
           pct_vencido: 0, fact_vencidas: 0, dias_prom: 0,
         };
@@ -189,8 +189,11 @@ export default function Dashboard() {
         s.vencido += pc;
         s.fact_vencidas++;
         if (inv.fecha_emision) {
-          const diff = Math.floor((today.getTime() - new Date(inv.fecha_emision).getTime()) / 86400000);
-          s.dias_prom += diff;
+          const diasCredito = clientMap[code]?.dias_credito ?? 0;
+          const fechaVenc = new Date(inv.fecha_emision);
+          fechaVenc.setDate(fechaVenc.getDate() + diasCredito);
+          const diff = Math.floor((today.getTime() - fechaVenc.getTime()) / 86400000);
+          if (diff > 0) s.dias_prom += diff;
         }
       } else if (inv.status === "vigente") {
         s.vigente += pc;
