@@ -400,7 +400,6 @@ export default function UploadPortfolio() {
       queryClient.invalidateQueries({ queryKey: ["upload-logs"] });
 
     } catch (err: any) {
-      console.error("❌ ERROR EN CARGA:", err);
       setErrorMsg(err.message || String(err));
       setStep("error");
       toast.error("Error al cargar cartera", {

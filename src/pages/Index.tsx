@@ -100,18 +100,6 @@ export default function Dashboard() {
       const sumaManual = verificacion.reduce((sum, inv) => sum + Number(inv.por_cobrar ?? 0), 0);
       const diferencia = Math.abs(sumaManual - parsedKpis.neto);
 
-      console.log("KPIs:", parsedKpis);
-      console.log("Verificación:", {
-        facturas_activas: verificacion.length,
-        suma_manual: sumaManual,
-        suma_kpis: parsedKpis.neto,
-        diferencia,
-      });
-
-      if (diferencia > 1) {
-        console.error("⚠️ DISCREPANCIA DETECTADA en totales");
-      }
-
       return parsedKpis;
     },
   });
