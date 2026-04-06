@@ -33,6 +33,21 @@ export default function AuditPage() {
     return map;
   }, [profiles]);
 
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!logs) return [];
+    if (!search) return logs;
+    const q = search.toLowerCase();
+    return logs.filter(
+      (l) =>
+        l.accion?.toLowerCase().includes(q) ||
+        l.tabla?.toLowerCase().includes(q) ||
+        l.registro_id?.toLowerCase().includes(q) ||
+        (l.user_id && (profileMap[l.user_id] || "").toLowerCase().includes(q))
+    );
+  }, [logs, search, profileMap]);
+
   const handleExport = useCallback(() => {
     if (!logs?.length) return;
     const data = logs.map((l) => ({
