@@ -176,7 +176,7 @@ export default function Dashboard() {
       if (!map[code]) {
         map[code] = {
           cliente_codigo: code,
-          nombre: clientMap[code] || code,
+          nombre: clientMap[code]?.nombre || code,
           vigente: 0, vencido: 0, a_favor: 0, neto: 0,
           pct_vencido: 0, fact_vencidas: 0, dias_prom: 0,
         };
