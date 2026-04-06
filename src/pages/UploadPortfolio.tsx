@@ -382,8 +382,6 @@ export default function UploadPortfolio() {
       const tiempoFinal = Math.round((Date.now() - tiempoInicio) / 1000);
       res.tiempo_procesamiento = tiempoFinal;
 
-      console.log('✅ CARGA COMPLETADA en', tiempoFinal, 'segundos');
-
       setProgress(100);
       setResult(res);
       setStep("done");
