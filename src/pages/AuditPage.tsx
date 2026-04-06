@@ -73,6 +73,16 @@ export default function AuditPage() {
         </Button>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Filtrar por acción, tabla, usuario..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-secondary border-border"
+        />
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
