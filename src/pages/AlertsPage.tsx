@@ -62,7 +62,7 @@ export default function AlertsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["alerts-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-alerts-count"] });
     },
   });
 
