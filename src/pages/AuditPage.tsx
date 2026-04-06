@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { Download, Search } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 
 export default function AuditPage() {
