@@ -16,7 +16,7 @@ interface InvoiceResult {
   cliente_codigo: string;
   por_cobrar: number | null;
   status: string;
-  clients?: { nombre: string } | null;
+  
 }
 
 const fmt = (n: number) =>

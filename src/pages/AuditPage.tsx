@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { Download, Search } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 
 export default function AuditPage() {
@@ -31,6 +32,21 @@ export default function AuditPage() {
     profiles?.forEach((p) => (map[p.id] = p.name));
     return map;
   }, [profiles]);
+
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!logs) return [];
+    if (!search) return logs;
+    const q = search.toLowerCase();
+    return logs.filter(
+      (l) =>
+        l.accion?.toLowerCase().includes(q) ||
+        l.tabla?.toLowerCase().includes(q) ||
+        l.registro_id?.toLowerCase().includes(q) ||
+        (l.user_id && (profileMap[l.user_id] || "").toLowerCase().includes(q))
+    );
+  }, [logs, search, profileMap]);
 
   const handleExport = useCallback(() => {
     if (!logs?.length) return;
@@ -57,6 +73,16 @@ export default function AuditPage() {
         </Button>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Filtrar por acción, tabla, usuario..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-secondary border-border"
+        />
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -71,7 +97,7 @@ export default function AuditPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs?.map((l) => (
+              {filtered.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="text-sm whitespace-nowrap">{new Date(l.created_at).toLocaleString("es-MX")}</TableCell>
                   <TableCell className="text-sm">{l.user_id ? profileMap[l.user_id] || "—" : "Sistema"}</TableCell>
@@ -83,13 +109,16 @@ export default function AuditPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {(!logs || logs.length === 0) && (
+              {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin registros de auditoría</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground text-center py-3 border-t border-border">
+            Mostrando los últimos 500 registros.
+          </p>
         </CardContent>
       </Card>
     </div>

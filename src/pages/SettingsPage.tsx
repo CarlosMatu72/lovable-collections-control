@@ -13,7 +13,7 @@ import { useMutation } from "@tanstack/react-query";
 export default function SettingsPage() {
   const { profile, user } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
-  const [currentPassword, setCurrentPassword] = useState("");
+  
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -40,7 +40,6 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       toast({ title: "✓ Contraseña actualizada" });
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     },

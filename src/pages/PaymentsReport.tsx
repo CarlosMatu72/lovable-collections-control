@@ -17,7 +17,7 @@ export default function PaymentsReport() {
   const { data: payments } = useQuery({
     queryKey: ["all-payments"],
     queryFn: async () => {
-      const { data } = await supabase.from("payment_log").select("*").order("created_at", { ascending: false });
+      const { data } = await supabase.from("payment_log").select("*").order("created_at", { ascending: false }).limit(500);
       return data ?? [];
     },
   });
@@ -106,6 +106,9 @@ export default function PaymentsReport() {
               )}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground text-center py-3 border-t border-border">
+            Mostrando los últimos 500 registros. Usa Exportar para ver el historial completo.
+          </p>
         </CardContent>
       </Card>
     </div>

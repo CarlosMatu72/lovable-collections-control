@@ -44,8 +44,6 @@ export default function HistoryPage() {
       Usuario: profileMap[log.user_id] || log.user_id,
       Archivo: log.archivo_nombre,
       "Facturas Nuevas": log.facturas_nuevas,
-      "Facturas Actualizadas": log.facturas_actualizadas,
-      "Facturas Pagadas": log.facturas_pagadas,
       "Clientes Nuevos": log.clientes_nuevos,
       Estado: log.status,
       Errores: log.error_message || "",
@@ -76,8 +74,6 @@ export default function HistoryPage() {
                 <TableHead>Usuario</TableHead>
                 <TableHead>Archivo</TableHead>
                 <TableHead className="text-right">Nuevas</TableHead>
-                <TableHead className="text-right">Actual.</TableHead>
-                <TableHead className="text-right">Pagadas</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -91,8 +87,6 @@ export default function HistoryPage() {
                   <TableCell className="text-sm">{profileMap[log.user_id] || "—"}</TableCell>
                   <TableCell className="text-sm max-w-32 truncate" title={log.archivo_nombre}>{log.archivo_nombre}</TableCell>
                   <TableCell className="text-right font-mono">{log.facturas_nuevas ?? 0}</TableCell>
-                  <TableCell className="text-right font-mono">{log.facturas_actualizadas ?? 0}</TableCell>
-                  <TableCell className="text-right font-mono">{log.facturas_pagadas ?? 0}</TableCell>
                   <TableCell>{statusIcon(log.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -108,7 +102,7 @@ export default function HistoryPage() {
               ))}
               {(!logs || logs.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -139,18 +133,10 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg bg-secondary p-3 text-center">
                   <p className="text-xl font-bold font-mono text-primary">{detailLog.facturas_nuevas ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Nuevas</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-3 text-center">
-                  <p className="text-xl font-bold font-mono" style={{ color: "hsl(var(--info))" }}>{detailLog.facturas_actualizadas ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Actualizadas</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-3 text-center">
-                  <p className="text-xl font-bold font-mono text-destructive">{detailLog.facturas_pagadas ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Pagadas</p>
                 </div>
                 <div className="rounded-lg bg-secondary p-3 text-center">
                   <p className="text-xl font-bold font-mono">{detailLog.clientes_nuevos ?? 0}</p>
