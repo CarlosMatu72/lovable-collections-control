@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const { profile, user } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
   
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -33,13 +34,20 @@ export default function SettingsPage() {
 
   const updatePassword = useMutation({
     mutationFn: async () => {
+      if (!currentPassword) throw new Error("Ingresa tu contraseña actual");
       if (newPassword.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres");
       if (newPassword !== confirmPassword) throw new Error("Las contraseñas no coinciden");
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile!.email,
+        password: currentPassword,
+      });
+      if (signInError) throw new Error("La contraseña actual es incorrecta");
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "✓ Contraseña actualizada" });
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     },
@@ -95,6 +103,15 @@ export default function SettingsPage() {
               <CardDescription>Actualiza tu contraseña de acceso</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label>Contraseña actual</Label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Tu contraseña actual"
+                />
+              </div>
               <div>
                 <Label>Nueva contraseña</Label>
                 <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />

@@ -12,10 +12,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 
-// BUILD VERSION
-const BUILD_VERSION = "2026-03-23-SIMPLE-DELETE-INSERT";
-console.log("📦 Build version:", BUILD_VERSION);
-
 interface ParsedRow {
   cliente_codigo: string;
   cliente_nombre: string;
@@ -235,8 +231,6 @@ export default function UploadPortfolio() {
         });
       }
 
-      console.log('📊 RESUMEN:', { facturas: deduplicated.length, monto: totalMonto, clientes: clientesUnicos.length, nuevos: clientesNuevos.length });
-
       setStats({
         total_facturas: deduplicated.length,
         total_monto: totalMonto,
@@ -273,7 +267,6 @@ export default function UploadPortfolio() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuario no autenticado");
 
-      console.log('🚀 INICIANDO CARGA DE CARTERA');
 
       // PASO 1: Crear clientes nuevos
       if (stats.clientesNuevos.length > 0) {
@@ -307,7 +300,6 @@ export default function UploadPortfolio() {
         .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (deleteError) throw deleteError;
-      console.log('✅ Facturas anteriores eliminadas');
 
       // PASO 3: INSERTAR todas las facturas del archivo
       setProgressMsg("Cargando facturas del archivo...");
@@ -342,7 +334,6 @@ export default function UploadPortfolio() {
 
         const { error } = await supabase.from("invoices").insert(invoicesData);
         if (error) {
-          console.error('❌ Error en batch:', error);
           throw new Error(`Error insertando facturas: ${error.message}`);
         }
 
@@ -383,15 +374,12 @@ export default function UploadPortfolio() {
 
       try {
         await actualizarStatusVencimientos();
-        console.log('✅ Vencimientos actualizados correctamente');
-      } catch (vencErr) {
-        console.warn("⚠️ Error actualizando vencimientos:", vencErr);
+      } catch (_vencErr) {
+        // Silently handle vencimiento update errors
       }
 
       const tiempoFinal = Math.round((Date.now() - tiempoInicio) / 1000);
       res.tiempo_procesamiento = tiempoFinal;
-
-      console.log('✅ CARGA COMPLETADA en', tiempoFinal, 'segundos');
 
       setProgress(100);
       setResult(res);
@@ -411,7 +399,6 @@ export default function UploadPortfolio() {
       queryClient.invalidateQueries({ queryKey: ["upload-logs"] });
 
     } catch (err: any) {
-      console.error("❌ ERROR EN CARGA:", err);
       setErrorMsg(err.message || String(err));
       setStep("error");
       toast.error("Error al cargar cartera", {
