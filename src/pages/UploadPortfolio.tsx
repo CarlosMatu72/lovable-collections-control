@@ -267,7 +267,6 @@ export default function UploadPortfolio() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuario no autenticado");
 
-      console.log('🚀 INICIANDO CARGA DE CARTERA');
 
       // PASO 1: Crear clientes nuevos
       if (stats.clientesNuevos.length > 0) {
