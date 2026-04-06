@@ -85,7 +85,7 @@ export default function Clients() {
       invMap[c].neto += pc;
       if (pc < 0) invMap[c].a_favor += Math.abs(pc);
       else if (inv.status === "vencida") { invMap[c].vencido += pc; invMap[c].fact_vencidas++; }
-      else if (inv.status === "vigente") invMap[c].vigente += pc;
+      else if (inv.status === "vigente" || inv.status === "abono_parcial") invMap[c].vigente += pc;
     });
 
     return clients.map((cl) => {

@@ -499,7 +499,7 @@ export default function ClientDetail() {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="vencidas">Solo Vencidas</SelectItem>
                   <SelectItem value="vigentes">Solo Vigentes</SelectItem>
-                  <SelectItem value="abono_parcial">Con Abonos</SelectItem>
+                  
                 </SelectContent>
               </Select>
               <div className="relative flex-1">

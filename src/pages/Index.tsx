@@ -161,7 +161,7 @@ export default function Dashboard() {
           const diff = Math.floor((today.getTime() - fechaVenc.getTime()) / 86400000);
           if (diff > 0) s.dias_prom += diff;
         }
-      } else if (inv.status === "vigente") {
+      } else if (inv.status === "vigente" || inv.status === "abono_parcial") {
         s.vigente += pc;
       }
     });
