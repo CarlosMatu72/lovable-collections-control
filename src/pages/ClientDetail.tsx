@@ -231,7 +231,7 @@ export default function ClientDetail() {
       });
       const { error } = await supabase.from("invoices").update({
         por_cobrar: saldoRestante,
-        status: "abono_parcial" as const,
+        status: abonoModal.prevStatus,
       }).eq("reference", abonoModal.ref);
       if (error) throw error;
     },
