@@ -180,7 +180,7 @@ export default function ClientDetail() {
     let list = invoicesWithDue;
     if (invoiceFilter === "vencidas") list = list.filter((i) => i.status === "vencida");
     else if (invoiceFilter === "vigentes") list = list.filter((i) => i.status === "vigente");
-    else if (invoiceFilter === "abono_parcial") list = list.filter((i) => i.status === "abono_parcial");
+    
     if (invoiceSearch) {
       const q = invoiceSearch.toLowerCase();
       list = list.filter((i) => i.reference.toLowerCase().includes(q));
