@@ -57,7 +57,7 @@ export default function Dashboard() {
   const { data: clients } = useQuery({
     queryKey: ["clients-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("codigo, nombre");
+      const { data } = await supabase.from("clients").select("codigo, nombre, dias_credito");
       return data ?? [];
     },
   });
