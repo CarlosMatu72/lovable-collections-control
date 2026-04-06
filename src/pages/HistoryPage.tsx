@@ -88,8 +88,6 @@ export default function HistoryPage() {
                   <TableCell className="text-sm">{profileMap[log.user_id] || "—"}</TableCell>
                   <TableCell className="text-sm max-w-32 truncate" title={log.archivo_nombre}>{log.archivo_nombre}</TableCell>
                   <TableCell className="text-right font-mono">{log.facturas_nuevas ?? 0}</TableCell>
-                  <TableCell className="text-right font-mono">{log.facturas_actualizadas ?? 0}</TableCell>
-                  <TableCell className="text-right font-mono">{log.facturas_pagadas ?? 0}</TableCell>
                   <TableCell>{statusIcon(log.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
