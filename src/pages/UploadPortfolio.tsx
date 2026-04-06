@@ -379,8 +379,13 @@ export default function UploadPortfolio() {
       });
 
       // Refrescar dashboard
-      queryClient.invalidateQueries({ queryKey: ["kpis"] });
-      queryClient.invalidateQueries({ queryKey: ["clients-table"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-last-upload"] });
+      queryClient.invalidateQueries({ queryKey: ["upload-logs"] });
 
     } catch (err: any) {
       console.error("❌ ERROR EN CARGA:", err);
