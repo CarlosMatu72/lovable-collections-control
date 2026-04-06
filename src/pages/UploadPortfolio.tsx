@@ -375,9 +375,8 @@ export default function UploadPortfolio() {
 
       try {
         await actualizarStatusVencimientos();
-        console.log('✅ Vencimientos actualizados correctamente');
-      } catch (vencErr) {
-        console.warn("⚠️ Error actualizando vencimientos:", vencErr);
+      } catch (_vencErr) {
+        // Silently handle vencimiento update errors
       }
 
       const tiempoFinal = Math.round((Date.now() - tiempoInicio) / 1000);
