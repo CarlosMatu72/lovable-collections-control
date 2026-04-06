@@ -46,7 +46,7 @@ export default function ClientDetail() {
   // Modal states
   const [payModal, setPayModal] = useState<{ ref: string; monto: number } | null>(null);
   const [payNotes, setPayNotes] = useState("");
-  const [abonoModal, setAbonoModal] = useState<{ ref: string; saldo: number } | null>(null);
+  const [abonoModal, setAbonoModal] = useState<{ ref: string; saldo: number; prevStatus: "vigente" | "vencida" | "abono_parcial" } | null>(null);
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoNotes, setAbonoNotes] = useState("");
   const [commentModal, setCommentModal] = useState(false);
@@ -231,12 +231,15 @@ export default function ClientDetail() {
       });
       const { error } = await supabase.from("invoices").update({
         por_cobrar: saldoRestante,
-        status: "abono_parcial" as const,
+        status: abonoModal.prevStatus,
       }).eq("reference", abonoModal.ref);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invoices-active", codigo] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
       setAbonoModal(null);
       setAbonoMonto("");
       setAbonoNotes("");
@@ -541,7 +544,7 @@ export default function ClientDetail() {
                               size="icon"
                               className="h-7 w-7"
                               title="Aplicar Abono"
-                              onClick={() => setAbonoModal({ ref: inv.reference, saldo: inv.por_cobrar ?? 0 })}
+                              onClick={() => setAbonoModal({ ref: inv.reference, saldo: inv.por_cobrar ?? 0, prevStatus: inv.status as "vigente" | "vencida" | "abono_parcial" })}
                             >
                               <DollarSign className="h-3.5 w-3.5" />
                             </Button>

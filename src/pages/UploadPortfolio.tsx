@@ -160,7 +160,7 @@ export default function UploadPortfolio() {
           const clienteStr = String(r["Cliente"] || "");
           const cuentaNorm = String(Math.floor(parseFloat(String(r["Cuenta"] || "0"))));
           return {
-            cliente_codigo: clienteStr.substring(0, 7).trim().toUpperCase(),
+            cliente_codigo: clienteStr.substring(0, 6).trim().toUpperCase(),
             cliente_nombre: clienteStr.substring(7).trim(),
             cuenta: cuentaNorm,
             reference: String(r["Referencia"] || "").trim().toUpperCase(),
@@ -379,8 +379,13 @@ export default function UploadPortfolio() {
       });
 
       // Refrescar dashboard
-      queryClient.invalidateQueries({ queryKey: ["kpis"] });
-      queryClient.invalidateQueries({ queryKey: ["clients-table"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-list"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-full"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-active"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-last-upload"] });
+      queryClient.invalidateQueries({ queryKey: ["upload-logs"] });
 
     } catch (err: any) {
       console.error("❌ ERROR EN CARGA:", err);
