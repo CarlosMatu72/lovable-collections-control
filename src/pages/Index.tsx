@@ -160,8 +160,8 @@ export default function Dashboard() {
   }, [uploadProfiles]);
 
   const clientMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    clients?.forEach((c) => (map[c.codigo] = c.nombre));
+    const map: Record<string, { nombre: string; dias_credito: number }> = {};
+    clients?.forEach((c) => (map[c.codigo] = { nombre: c.nombre, dias_credito: c.dias_credito ?? 0 }));
     return map;
   }, [clients]);
 
